@@ -990,61 +990,67 @@ def line_profile_plot(pitch, height, cd_bot, swa, savepath=None):
     return fig
 
 
-def mcmc(data, qxs, qzs, initial_guess, N, sigma, nsteps, nwalkers, use_mh=False, parallel=True, seed=None,
-             verbose=True):
-    """Fit with emcee package's implementation of MCMC algorithm and place into instance of self
-    Calls fitness_individual many times, then calls make_population_frame_best
-
-    Attributes:
-        best_uncorr: best uncorrected individual
-        best_fitness: scalar
-        minfitness_each_gen: length ngen
-        Sampler: instance of emcee.Sampler with detailed output of algorithm
+def mcmc(data, qxs, qzs, initial_guess, N, sigma, nsteps, nwalkers, gaussian_move=False, parallel=True, seed=None, verbose=True):
+    """
+    Fit data using the emcee package's implementation of the MCMC algorithm.
 
     Args:
-        self: instance of Run
-        sigma: array or scalar, initial standard deviation for each parameter
-        nsteps: number of steps
-        nwalkers: number of walkers
-        use_mh: True for Metropolis-Hastings proposal and ensemble Sampler, False for ensemble Sampler, 'MH' for Metropolis-Hastings proposal and Sampler
-        parallel: False for no parallel, True for cpu_count() processes, or int to specify number of processes, or 'scoop' for cluster
-        plot_on: whether to plot fitness, best trapezoids and sim and exp scattering
-        seed: seed for random number generator
+        data (numpy.ndarray): Experimental data.
+        qxs (numpy.ndarray): Q-values for x-direction.
+        qzs (numpy.ndarray): Q-values for z-direction.
+        initial_guess (numpy.ndarray): Initial parameter guess.
+        N (int): Number of parameters.
+        sigma (float or list): Initial standard deviation for each parameter.
+        nsteps (int): Number of MCMC steps.
+        nwalkers (int): Number of MCMC walkers.
+        gaussian_move (bool, optional): Use Metropolis-Hastings gaussian proposal. Default is strech move.
+        parallel (bool or int or str, optional): Set the parallel processing mode. Default is True.
+        seed (int, optional): Seed for the random number generator.
+        verbose (bool, optional): Print progress information. Default is True.
+
+    Returns:
+        None
+
+    Attributes:
+        best_uncorr (numpy.ndarray): Best uncorrected individual.
+        best_fitness (float): Best fitness value.
+        minfitness_each_gen (numpy.ndarray): Minimum fitness at each generation.
+        Sampler (emcee.EnsembleSampler): Instance of emcee.Sampler with detailed output of the algorithm.
     """
-
     
+    # Create a PickeableResidual instance for data fitting
     residual = PickeableResidual(data, qxs, qzs, initial_guess, fit_mode='mcmc')
-        
-    def do_verbose(Sampler):
-            if hasattr(Sampler, 'acceptance_fraction'):
-                print('Acceptance fraction: ' + str(np.mean(Sampler.acceptance_fraction)))
-            else:
-                print('Acceptance fraction: ' + str(np.mean([Sampler.acceptance_fraction for Sampler in Sampler])))
-            sys.stdout.flush()
     
-    c = 1e-1  # empirical factor to modify mcmc acceptance rate, makes printed fitness different than actual, higher c increases acceptance rate
-
-    #generate random seed if none is given    
+    def do_verbose(Sampler):
+        if hasattr(Sampler, 'acceptance_fraction'):
+            print('Acceptance fraction: ' + str(np.mean(Sampler.acceptance_fraction)))
+        else:
+            print('Acceptance fraction: ' + str(np.mean([Sampler.acceptance_fraction for Sampler in Sampler])))
+        sys.stdout.flush()
+    
+    # Empirical factor to modify MCMC acceptance rate
+    c = 1e-1
+    
+    # Generate a random seed if none is provided
     if seed is None:
         seed = randrange(2 ** 32)
     seed = seed
     np.random.seed(seed)
+    
+    # Initialize fix_fitness function for MCMC
     fix_fitness = fix_fitness_mcmc
-
+    
     if hasattr(sigma, '__len__'):
         sigma = sigma
     else:
         sigma = [sigma] * N
         
         print('{} parameters'.format(N))
-
-
+    
     with mp.Pool(processes=mp.cpu_count()) as pool:
-
-        #if use_mh is true then use gaussian move for the proposal distribution else use strech move which is the default is moves is not specified
-        if use_mh:
-            
-            individuals = [np.random.uniform(0,10e-10,N) for _ in range(nwalkers)]#original code used np.zeroes but emcee complains that they should be linearly independent so i choose values very close to zero but not exactly zero
+        if gaussian_move:
+            # Use Gaussian move for the proposal distribution
+            individuals = [np.random.uniform(0, 10e-10, N) for _ in range(nwalkers)]
             np.asarray(individuals)
             Sampler = emcee.EnsembleSampler(nwalkers, N, residual, moves=emcee.moves.GaussianMove(sigma), pool=pool)
 
@@ -1052,46 +1058,36 @@ def mcmc(data, qxs, qzs, initial_guess, N, sigma, nsteps, nwalkers, use_mh=False
 
             if verbose:
                 do_verbose(Sampler)
-
         else:
-            
+            # Use the default stretch move
             individuals = [[np.random.normal(loc=0, scale=s) for s in sigma] for _ in range(nwalkers)]
-                        
             Sampler = emcee.EnsembleSampler(nwalkers, N, residual, pool=pool)
             
             Sampler.run_mcmc(individuals, nsteps, progress=True)
 
             if verbose:
                 do_verbose(Sampler)
+    
     pool.join()
     
-
+    # Data processing and analysis
     s = Sampler.chain.shape
     flatchain = np.transpose(Sampler.chain, axes=[1, 0, 2]).reshape(s[0] * s[1], s[2])
     flatlnprobability = Sampler.lnprobability.transpose().flatten()
     minfitness_each_gen = np.min(-Sampler.lnprobability * c, axis=0)
-
-    # flatchain has shape (nwalkers * nsteps, N)
-    # flatlnprobability has shape (nwalkers * nsteps,)
-    # flatchain and flatlnprobability list first step of all walkers, then second step of all walkers...
-
-    # Sampler.flatchain and Sampler.flatlnprobability (made by package) list all steps of first walker, then all steps of second walker...
-    # but we don't want that
-
+    
     flatfitness = -flatlnprobability * c
     best_index = np.argmin(flatfitness)
     best_fitness = flatfitness[best_index]
     best_uncorr = flatchain[best_index]
-    best_corr = fittingp_to_simp(best_uncorr, initial_guess)#, multiples)
-
-    # Warning, it was a self.residual
+    best_corr = fittingp_to_simp(best_uncorr, initial_guess)
+    
     residual(best_uncorr)
-
-    population_array = fittingp_to_simp(flatchain, initial_guess)#, multiples)
+    
+    population_array = fittingp_to_simp(flatchain, initial_guess)
     path = os.path.join('./', 'poparr.npy')
     np.save(os.path.join(path), population_array)
-    # self.population_array = flatchain
-
+    
     population_frame = pd.DataFrame(np.column_stack((population_array, flatfitness)))
     gen_start = 0
     gen_stop = len(flatfitness)
@@ -1103,5 +1099,5 @@ def mcmc(data, qxs, qzs, initial_guess, N, sigma, nsteps, nwalkers, use_mh=False
     resampled_frame = population_frame.iloc[index]
     stats = resampled_frame.describe()
     stats.to_csv(os.path.join('./', 'test.csv'))
-
+    
     print("CSV saved to {}".format(path))

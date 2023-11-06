@@ -28,7 +28,7 @@ if __name__ == '__main__':
           sigma = 1e-07, 
           nsteps = 8, 
           nwalkers = 50, 
-          use_mh=True, 
+          gaussian_move=True, 
           parallel=False, 
           seed=None, 
           verbose=True)
