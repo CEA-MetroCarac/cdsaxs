@@ -10,15 +10,11 @@ import os
 from collections import deque
 import numpy as np
 import pandas as pd
-from random import randrange
 import matplotlib.pyplot as plt
 import deap.base as dbase
 from deap import creator, tools, cma
 from scipy import stats
 import scipy.interpolate
-import emcee
-import sys
-import multiprocessing as mp
 
 creator.create('FitnessMin', dbase.Fitness, weights=(-1.,))  # to minim. fitness
 creator.create('Individual', list, fitness=creator.FitnessMin)
@@ -366,14 +362,8 @@ def cmaes(data, qxs, qzs, initial_guess, sigma, ngen,
     toolbox = dbase.Toolbox()
     residual = PickeableResidual(data, qxs, qzs, initial_guess,
                                  fit_mode='cmaes')
-    
-    toolbox.register('evaluate', residual)
-    
-    #register parallel map function to toolbox
-    parallel = mp.cpu_count()
-    pool = mp.Pool(parallel)
-    toolbox.register('map', pool.map)
 
+    toolbox.register('evaluate', residual)
     halloffame = tools.HallOfFame(1)
 
     thestats = tools.Statistics(lambda ind: ind.fitness.values)
@@ -444,12 +434,6 @@ def cmaes(data, qxs, qzs, initial_guess, sigma, ngen,
             population_list.append(population)
             # Evaluate the individuals
             fitnesses = toolbox.map(toolbox.evaluate, population)
-
-            #these two lines are added for parallel
-            pool.close()
-            pool.join()#close the pool and wait for the work to finish
-
-
             for ind, fit in zip(population, fitnesses):
                 ind.fitness.values = (fit,)  # tuple of length 1
             halloffame.update(population)
@@ -573,17 +557,6 @@ def fittingp_to_simp1(fit_params, initial_guess):
 
     return simp
 
-def fix_fitness_mcmc(fitness):
-    """
-    Metropolis-Hastings criterion: acceptance probability equal to ratio between P(new)/P(old)
-    where P is proportional to probability distribution we want to find
-    for our case we assume that probability of our parameters being the best is proportional to a Gaussian centered at fitness=0
-    where fitness can be log, abs, squared error, etc.
-    emcee expects the fitness function to return ln(P(new)), P(old) is auto-calculated
-    """
-    c = 1e-1  # empirical factor to modify mcmc acceptance rate, makes printed fitness different than actual, higher c increases acceptance rate
-    return -fitness / c
-    # return -0.5 * fitness ** 2 / c ** 2
 
 class PickeableResidual():
     """
@@ -650,8 +623,6 @@ class PickeableResidual():
 
         if self.mfit_mode == 'cmaes':
             return res
-        elif self.mfit_mode == 'mcmc':
-            return fix_fitness_mcmc(res)
         else:
             print("This mode does not exist")
             return -1
@@ -988,116 +959,3 @@ def line_profile_plot(pitch, height, cd_bot, swa, savepath=None):
         plt.savefig(savepath + "\\lineprofile.png")
 
     return fig
-
-
-def mcmc(data, qxs, qzs, initial_guess, N, sigma, nsteps, nwalkers, gaussian_move=False, parallel=True, seed=None, verbose=True):
-    """
-    Fit data using the emcee package's implementation of the MCMC algorithm.
-
-    Args:
-        data (numpy.ndarray): Experimental data.
-        qxs (numpy.ndarray): Q-values for x-direction.
-        qzs (numpy.ndarray): Q-values for z-direction.
-        initial_guess (numpy.ndarray): Initial parameter guess.
-        N (int): Number of parameters.
-        sigma (float or list): Initial standard deviation for each parameter.
-        nsteps (int): Number of MCMC steps.
-        nwalkers (int): Number of MCMC walkers.
-        gaussian_move (bool, optional): Use Metropolis-Hastings gaussian proposal. Default is strech move.
-        parallel (bool or int or str, optional): Set the parallel processing mode. Default is True.
-        seed (int, optional): Seed for the random number generator.
-        verbose (bool, optional): Print progress information. Default is True.
-
-    Returns:
-        None
-
-    Attributes:
-        best_uncorr (numpy.ndarray): Best uncorrected individual.
-        best_fitness (float): Best fitness value.
-        minfitness_each_gen (numpy.ndarray): Minimum fitness at each generation.
-        Sampler (emcee.EnsembleSampler): Instance of emcee.Sampler with detailed output of the algorithm.
-    """
-    
-    # Create a PickeableResidual instance for data fitting
-    residual = PickeableResidual(data, qxs, qzs, initial_guess, fit_mode='mcmc')
-    
-    def do_verbose(Sampler):
-        if hasattr(Sampler, 'acceptance_fraction'):
-            print('Acceptance fraction: ' + str(np.mean(Sampler.acceptance_fraction)))
-        else:
-            print('Acceptance fraction: ' + str(np.mean([Sampler.acceptance_fraction for Sampler in Sampler])))
-        sys.stdout.flush()
-    
-    # Empirical factor to modify MCMC acceptance rate
-    c = 1e-1
-    
-    # Generate a random seed if none is provided
-    if seed is None:
-        seed = randrange(2 ** 32)
-    seed = seed
-    np.random.seed(seed)
-    
-    # Initialize fix_fitness function for MCMC
-    fix_fitness = fix_fitness_mcmc
-    
-    if hasattr(sigma, '__len__'):
-        sigma = sigma
-    else:
-        sigma = [sigma] * N
-        
-        print('{} parameters'.format(N))
-    
-    with mp.Pool(processes=mp.cpu_count()) as pool:
-        if gaussian_move:
-            # Use Gaussian move for the proposal distribution
-            individuals = [np.random.uniform(0, 10e-10, N) for _ in range(nwalkers)]
-            np.asarray(individuals)
-            Sampler = emcee.EnsembleSampler(nwalkers, N, residual, moves=emcee.moves.GaussianMove(sigma), pool=pool)
-
-            Sampler.run_mcmc(individuals, nsteps, progress=True)
-
-            if verbose:
-                do_verbose(Sampler)
-        else:
-            # Use the default stretch move
-            individuals = [[np.random.normal(loc=0, scale=s) for s in sigma] for _ in range(nwalkers)]
-            Sampler = emcee.EnsembleSampler(nwalkers, N, residual, pool=pool)
-            
-            Sampler.run_mcmc(individuals, nsteps, progress=True)
-
-            if verbose:
-                do_verbose(Sampler)
-    
-    pool.join()
-    
-    # Data processing and analysis
-    s = Sampler.chain.shape
-    flatchain = np.transpose(Sampler.chain, axes=[1, 0, 2]).reshape(s[0] * s[1], s[2])
-    flatlnprobability = Sampler.lnprobability.transpose().flatten()
-    minfitness_each_gen = np.min(-Sampler.lnprobability * c, axis=0)
-    
-    flatfitness = -flatlnprobability * c
-    best_index = np.argmin(flatfitness)
-    best_fitness = flatfitness[best_index]
-    best_uncorr = flatchain[best_index]
-    best_corr = fittingp_to_simp(best_uncorr, initial_guess)
-    
-    residual(best_uncorr)
-    
-    population_array = fittingp_to_simp(flatchain, initial_guess)
-    path = os.path.join('./', 'poparr.npy')
-    np.save(os.path.join(path), population_array)
-    
-    population_frame = pd.DataFrame(np.column_stack((population_array, flatfitness)))
-    gen_start = 0
-    gen_stop = len(flatfitness)
-    gen_step = 1
-    popsize = int(population_frame.shape[0] / len(flatfitness))
-    index = []
-    for i in range(gen_start, gen_stop, gen_step):
-        index.extend(list(range(i * popsize, (i + 1) * popsize)))
-    resampled_frame = population_frame.iloc[index]
-    stats = resampled_frame.describe()
-    stats.to_csv(os.path.join('./', 'test.csv'))
-    
-    print("CSV saved to {}".format(path))
