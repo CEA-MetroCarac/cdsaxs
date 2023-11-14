@@ -20,6 +20,9 @@ swa = [78, 90, 88, 84, 88, 85]
 
 initial_guess = np.array([dwx, dwz, i0, bkg, height, bot_cd] + swa)
 multiples = [1E-8, 1E-8, 1E-8, 1E-7, 1E-7, 1E-7] + len(swa) * [1E-5]
+multiples = [1]*len(multiples)
+sigma = 1E-7*np.asarray(initial_guess)
+
 
 assert len(initial_guess) == len(multiples), f'Number of adds ({len(initial_guess)}) is different from number of multiples ({len(multiples)})'
 
@@ -34,9 +37,9 @@ if __name__ == '__main__':
           initial_guess=np.asarray(initial_guess),
           multiples=np.asarray(multiples),
           N=12, 
-          sigma = 1e-07, 
-          nsteps = 5, 
-          nwalkers = 15, 
+          sigma = sigma, 
+          nsteps = 50, 
+          nwalkers = 100, #needs to be higher than 2 x N 
           gaussian_move=False, 
           parallel=False, 
           seed=None, 
