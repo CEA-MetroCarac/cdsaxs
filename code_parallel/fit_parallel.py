@@ -85,7 +85,7 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
     toolbox.register('evaluate', residual)
     
     #register parallel map function to toolbox
-    parallel = mp.cpu_count()
+    parallel = 4#mp.cpu_count()
     pool = mp.Pool(parallel)
     toolbox.register('map', pool.map)
 
@@ -220,7 +220,7 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
 
     return best_corr, best_fitness
 
-def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, gaussian_move=False, parallel=True, seed=None, verbose=True):
+def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, gaussian_move=False, parallel=True, seed=None, verbose=True, test=False):
     """
     Fit data using the emcee package's implementation of the MCMC algorithm.
 
@@ -274,7 +274,7 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
         
         print('{} parameters'.format(N))
     
-    with mp.Pool(processes=mp.cpu_count()) as pool:
+    with mp.Pool(processes=3) as pool:
         if gaussian_move:
             # Use Gaussian move for the proposal distribution
             individuals = np.asarray([np.random.uniform(0, 10e-10, N) for _ in range(nwalkers)])
@@ -324,9 +324,20 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
         index.extend(list(range(i * popsize, (i + 1) * popsize)))
     resampled_frame = population_frame.iloc[index]
     stats = resampled_frame.describe()
-    stats.to_csv(os.path.join('./', 'test.csv'))
+
+    # to test we return at the mean values and make sure that they are close to the true values
+    # and convert the pandas dataframe to a numpy array
+    if(test):
+        mean = (stats.mean()).to_numpy()
+        return mean[:-1]#last value is the fitness don't need it for testing
+
+    else:
+        stats.to_csv(os.path.join('./', 'test.csv'))
+        stats.to_csv(os.path.join('./', 'test.csv'))
     
-    print("CSV saved to {}".format(path))
+        stats.to_csv(os.path.join('./', 'test.csv'))    
+    
+        print("CSV saved to {}".format(path))
 
 
 def fix_fitness_mcmc(fitness):
