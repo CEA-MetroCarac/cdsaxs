@@ -87,7 +87,7 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
     toolbox.register('evaluate', residual)
     
     #register parallel map function to toolbox
-    parallel = 4#mp.cpu_count()
+    parallel = mp.cpu_count()
     pool = mp.Pool(parallel)
     toolbox.register('map', pool.map)
 
@@ -252,7 +252,8 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
     
     # Create a PickeableResidual instance for data fitting
     residual = PickeableResidual(data=data, qxs=qxs, qzs=qzs, initial_guess=initial_guess, multiples=multiples, fit_mode='mcmc')
-    
+    process = mp.cpu_count()
+
     def do_verbose(Sampler):
         if hasattr(Sampler, 'acceptance_fraction'):
             print('Acceptance fraction: ' + str(np.mean(Sampler.acceptance_fraction)))
@@ -276,7 +277,7 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
         
         print('{} parameters'.format(N))
     
-    with mp.Pool(processes=3) as pool:
+    with mp.Pool(processes=process) as pool:
         if gaussian_move:
             # Use Gaussian move for the proposal distribution
             individuals = np.asarray([np.random.uniform(0, 10e-10, N) for _ in range(nwalkers)])
@@ -327,17 +328,15 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
     resampled_frame = population_frame.iloc[index]
     stats = resampled_frame.describe()
 
-    # to test we return at the mean values and make sure that they are close to the true values
+    # to test we return the mean values and make sure that they are close to the true values
     # and convert the pandas dataframe to a numpy array
     if(test):
-        mean = (stats.mean()).to_numpy()
+        mean = stats.iloc[1:-1].mean().to_numpy()
+        print(mean)
         return mean[:-1]#last value is the fitness don't need it for testing
 
     else:
-        stats.to_csv(os.path.join('./', 'test.csv'))
-        stats.to_csv(os.path.join('./', 'test.csv'))
-    
-        stats.to_csv(os.path.join('./', 'test.csv'))    
+        stats.to_csv(os.path.join('./', 'test.csv'))   
     
         print("CSV saved to {}".format(path))
 

@@ -32,7 +32,7 @@ qxs = qxs
 qzs = qzs
 
 # Define a range of population sizes
-nbpop = np.arange(10, 700, 50)
+nbpop = [400,500]#np.arange(10, 700, 50)
 # nbpop = [10, 11]
 
 # Initialize lists to store execution times
@@ -50,21 +50,23 @@ if __name__ == '__main__':  # This is necessary for parallel execution
         end = time.time()
         timeP.append(end - start)
 
-        # Non-parallel execution
-        start = time.time()
-        best_corr, best_fitness = cmaes(data=data, qxs=qxs, qzs=qzs, sigma=100, ngen=30, popsize=i, mu=10,
-                                            n_default=len(initial_guess), restarts=0, verbose=False, tolhistfun=5e-5,
-                                            initial_guess=initial_guess, ftarget=None, dir_save=None)
-        end = time.time()
-        timeNP.append(end - start)
+        print(best_corr, ":", initial_guess)
 
-    np.savetxt('time.txt', [timeP, timeNP])  # Save the execution times for parallel execution
+        # # Non-parallel execution
+        # start = time.time()
+        # best_corr, best_fitness = cmaes(data=data, qxs=qxs, qzs=qzs, sigma=100, ngen=30, popsize=i, mu=10,
+        #                                     n_default=len(initial_guess), restarts=0, verbose=False, tolhistfun=5e-5,
+        #                                     initial_guess=initial_guess, ftarget=None, dir_save=None)
+        # end = time.time()
+        # timeNP.append(end - start)
+
+    # np.savetxt('time.txt', [timeP, timeNP])  # Save the execution times for parallel execution
 
     # Create a plot to compare execution times
-    plt.plot(nbpop, timeP, label='Parallel')
-    plt.plot(nbpop, timeNP, label='Non-Parallel')
-    plt.xlabel('Number of population')
-    plt.ylabel('Time (s)')
-    plt.legend()
-    plt.savefig('time.png')  # Save the plot as an image
-    plt.show()  # Display the plot
+    # plt.plot(nbpop, timeP, label='Parallel')
+    # plt.plot(nbpop, timeNP, label='Non-Parallel')
+    # plt.xlabel('Number of population')
+    # plt.ylabel('Time (s)')
+    # plt.legend()
+    # plt.savefig('time.png')  # Save the plot as an image
+    # plt.show()  # Display the plot
