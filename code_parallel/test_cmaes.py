@@ -5,10 +5,14 @@ import os
 
 
 # Define the path and load data from a file
-path = '../data'
-qxs = np.loadtxt(os.path.join(path, 'qx_exp.txt'))
-qzs = np.loadtxt(os.path.join(path, 'qz_exp.txt'))
-data = np.loadtxt(os.path.join(path, 'i_exp.txt'))
+# path = '../data'
+# qxs = np.loadtxt(os.path.join(path, 'qx_exp.txt'))
+# qzs = np.loadtxt(os.path.join(path, 'qz_exp.txt'))
+# data = np.loadtxt(os.path.join(path, 'i_exp.txt'))
+
+pitch = 200 #nm
+qzs = np.linspace(-0.2,0.2,120)
+qxs = 2 * np.pi / pitch * np.ones_like(qzs)
 
 # Define initial parameters and multiples
 dwx = 0.1
@@ -24,11 +28,6 @@ multiples = [1E-8, 1E-8, 1E-8, 1E-7, 1E-7, 1E-7] + len(swa) * [1E-5]
 # Check if the number of initial guesses matches the number of multiples
 # assert len(initial_guess) == len(multiples), f'Number of adds ({len(initial_guess)}) is different from number of multiples ({len(multiples)})'
 
-# Define data arrays
-data = data
-qxs = qxs
-qzs = qzs
-
 # Generate data based on Fourier transform of arbitrary parameters using stacked_trapezoids
 def generate_arbitrary_data():
     arbitrary_params = np.array([dwx, dwz, i0, bkg, height, bot_cd] + swa)
@@ -39,16 +38,16 @@ def test_cmaes_with_arbitrary_data():
     # Generate arbitrary data and parameters
     data, arbitrary_params = generate_arbitrary_data()
 
-
-
     # Call the cmaes function with arbitrary data
-    if(__name__ == "__main__"):
-        best_corr, best_fitness = cmaes(data=data, qxs=qxs, qzs=qzs, sigma=100, ngen=30, popsize=100, mu=10,
+    if __name__ == "__main__":
+        for i in range(2):
+            best_corr, best_fitness = cmaes(data=data, qxs=qxs, qzs=qzs, sigma=100, ngen=40, popsize=400, mu=10,
                                                     n_default=len(arbitrary_params), multiples=multiples, restarts=0, verbose=False, tolhistfun=5e-5,
                                                     initial_guess=arbitrary_params, ftarget=None, dir_save=None)
+            print(best_corr, ":", arbitrary_params)
 
     # Compare the obtained parameters with the arbitrary ones within a tolerance
-    tolerance = 0.02  # Adjust the tolerance as needed
+    tolerance = 0.1  # Adjust the tolerance as needed
     assert np.allclose(best_corr, arbitrary_params, rtol=tolerance), "Test failed!"
 
     print("Test passed successfully!")

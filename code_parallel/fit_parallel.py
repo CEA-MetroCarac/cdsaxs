@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """
 Performs model inverse resolution from cut inside QxQzI reciprocal map to
 obtained 3D line profile
