@@ -38,23 +38,25 @@ def test_mcmc_with_arbitrary_data():
 
     # Call the mcmc function with arbitrary data
     if (__name__ == "__main__"):
-        best_corr = mcmc(data=data,
-                         qxs=qxs,
-                         qzs=qzs,
-                         initial_guess=np.asarray(arbitrary_params),
-                         multiples=np.asarray(multiples),
-                         N=len(arbitrary_params),
-                         sigma=sigma,
-                         nsteps=50,
-                         nwalkers=120,  # needs to be higher than 2 x N
-                         gaussian_move=False,
-                         parallel=False,
-                         seed=None,
-                         verbose=True,
-                         test=True)
+        
+        for i in range(5):
+            best_corr = mcmc(data=data,
+                            qxs=qxs,
+                            qzs=qzs,
+                            initial_guess=np.asarray(arbitrary_params),
+                            multiples=np.asarray(multiples),
+                            N=len(arbitrary_params),
+                            sigma=sigma,
+                            nsteps=50,
+                            nwalkers=120,  # needs to be higher than 2 x N
+                            gaussian_move=False,
+                            parallel=False,
+                            seed=None,
+                            verbose=True,
+                            test=True)
 
-        print("Best correlation: ", best_corr)
-        print("arbitrary_params: ", arbitrary_params)
+            print("Best correlation: ", best_corr)
+            print("arbitrary_params: ", arbitrary_params)
 
         # Split the obtained parameters into non-angles and angles
         arbitary_non_angles = arbitrary_params[:6]

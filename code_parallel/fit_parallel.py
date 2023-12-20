@@ -331,8 +331,7 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
     # to test we return the mean values and make sure that they are close to the true values
     # and convert the pandas dataframe to a numpy array
     if(test):
-        mean = stats.iloc[1:-1].mean().to_numpy()
-        print(mean)
+        mean = stats.loc['mean'].to_numpy()
         return mean[:-1]#last value is the fitness don't need it for testing
 
     else:
