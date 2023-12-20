@@ -2,6 +2,7 @@ import numpy as np
 from fit import stacked_trapezoids
 from fit_parallel import cmaes
 import os
+import pytest
 
 
 # Define the path and load data from a file

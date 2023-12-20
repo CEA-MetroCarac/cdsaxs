@@ -314,8 +314,6 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
     
     
     population_array = fittingp_to_simp1(flatchain, initial_guess=initial_guess, multiples=multiples)
-    path = os.path.join('./', 'poparr.npy')
-    np.save(os.path.join(path), population_array)
 
     population_frame = pd.DataFrame(np.column_stack((population_array, flatfitness)))
     gen_start = 0
@@ -334,9 +332,13 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
         mean = stats.loc['mean'].to_numpy()
         return mean[:-1]#last value is the fitness don't need it for testing
 
-    else:
-        stats.to_csv(os.path.join('./', 'test.csv'))   
-    
+    else:  
+        #save the population array
+        path = os.path.join('./', 'poparr.npy')
+        np.save(os.path.join(path), population_array)
+
+        #save the stat data
+        stats.to_csv(os.path.join('./', 'test.csv')) 
         print("CSV saved to {}".format(path))
 
 
