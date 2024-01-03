@@ -2,23 +2,20 @@ import numpy as np
 import cupy as cp
 import multiprocessing
 
-def custom_map(func, iterable):
-    # Check if GPU is available
-    if cp.cuda.is_available():
-        # Get the number of elements in the iterable
-        num_elements = len(iterable)
+def custom_map(func, iterable, use_gpu=False):
+    if cp.cuda.is_available() and use_gpu:
+        # Convert the iterable to a CuPy array for GPU processing
+        iterable_gpu = cp.array(iterable)
 
-        # Create an output array to store the results
-        output = cp.empty(num_elements)
+        # Apply the function in a vectorized manner
+        output = func(iterable_gpu, use_gpu=True)
 
-        # Divide the work among the GPUs
-        for i, item in enumerate(iterable):
-            output[i] = func(item)
-
-        return output.get()
+        # Convert back to a NumPy array if needed outside GPU context
+        return cp.asnumpy(output)
     else:
-        # Use multiprocessing library pool.map
-        with multiprocessing.Pool() as pool:
-            return np.asarray(pool.map(func, iterable))
-        
-
+        # Use a persistent multiprocessing pool
+        pool = multiprocessing.Pool()
+        output = np.asarray(pool.map(func, iterable))
+        pool.close()
+        pool.join()
+        return output
