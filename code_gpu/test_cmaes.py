@@ -1,5 +1,4 @@
 from fit_parallel import cmaes as cmaes_parallel
-from fit import cmaes
 import numpy as np
 import os
 import time
@@ -46,8 +45,18 @@ if __name__ == '__main__':  # This is necessary for parallel execution
         start = time.time()
         best_corr, best_fitness = cmaes_parallel(data=data, qxs=qxs, qzs=qzs, sigma=100, ngen=30, popsize=i, mu=10,
                                                     n_default=len(initial_guess), multiples=multiples, restarts=0, verbose=False, tolhistfun=5e-5,
-                                                    initial_guess=initial_guess, ftarget=None, dir_save=None)
+                                                    initial_guess=initial_guess, ftarget=None, dir_save=None, use_gpu=True)
         end = time.time()
         timeP.append(end - start)
 
-        print(best_corr, ":", initial_guess)
+        print(f'gpu execution time for {i} individuals: {end - start} seconds')
+
+        start = time.time()
+        best_corr, best_fitness = cmaes_parallel(data=data, qxs=qxs, qzs=qzs, sigma=100, ngen=30, popsize=i, mu=10,
+                                                    n_default=len(initial_guess), multiples=multiples, restarts=0, verbose=False, tolhistfun=5e-5,
+                                                    initial_guess=initial_guess, ftarget=None, dir_save=None, use_gpu=False)
+        end = time.time()
+        timeP.append(end - start)
+
+        print(f'non-gpu execution time for {i} individuals: {end - start} seconds')
+
