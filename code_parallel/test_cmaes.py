@@ -1,5 +1,5 @@
 import numpy as np
-from fit import stacked_trapezoids
+from fit import stacked_trapezoids, corrections_dwi0bk
 from fit_parallel import cmaes
 import os
 import pytest
@@ -10,18 +10,18 @@ import pytest
 # qxs = np.loadtxt(os.path.join(path, 'qx_exp.txt'))
 # qzs = np.loadtxt(os.path.join(path, 'qz_exp.txt'))
 
-pitch = 100 * 10e-9 #nm distance between two trapezoidal bars
-qzs = np.linspace(-0.8,0.8,120)
+pitch = 100 #nm distance between two trapezoidal bars
+qzs = np.linspace(-0.1, 0.1, 120)
 qxs = 2 * np.pi / pitch * np.ones_like(qzs)
 
 # Define initial parameters and multiples
 dwx = 0.1
 dwz = 0.1
-i0 = 0.203
+i0 = 10
 bkg = 0.1
 height = 23.48
 bot_cd = 54.6
-swa = [80, 80, 80, 80, 80, 80]
+swa = [90]
 
 multiples = [1E-9, 1E-9, 1E-9, 1E-9, 1E-9, 1E-9] + len(swa) * [1E-9]
 
@@ -34,6 +34,7 @@ def generate_arbitrary_data():
     langle = np.deg2rad(np.asarray(swa))
     rangle = np.deg2rad(np.asarray(swa))
     data = stacked_trapezoids(qxs, qzs, y1=0, y2=bot_cd, height=height, langle=langle)
+    data = corrections_dwi0bk(data, dwx, dwz, i0, bkg, qxs, qzs)
     return data, arbitrary_params
 
 def test_cmaes_with_arbitrary_data():
@@ -44,29 +45,16 @@ def test_cmaes_with_arbitrary_data():
     if __name__ == "__main__":
         for i in range(2):
             best_corr, best_fitness = cmaes(data=data, qxs=qxs, qzs=qzs, sigma=100, ngen=40, popsize=400, mu=10,
-                                                    n_default=len(arbitrary_params), multiples=multiples, restarts=0, verbose=False, tolhistfun=5e-5,
-                                                    initial_guess=arbitrary_params, ftarget=None, dir_save=None)
+                                            n_default=len(arbitrary_params), multiples=multiples, restarts=0, verbose=False, tolhistfun=5e-5,
+                                            initial_guess=arbitrary_params, ftarget=None, dir_save=None)
             print(best_corr, ":", arbitrary_params)
     
     # Split the obtained parameters into non-angles and angles because those are non compatible for only one test
-    arbitary_non_angles = arbitrary_params[0:6]
-    best_non_angles = best_corr[0:6]
-    arbitary_angles = arbitrary_params[6:]
-    best_angles = best_corr[6:]
 
-    print("arbitary_non_angles:", arbitary_non_angles)
-    print("best_non_angles:", best_non_angles)
-    # Compare the obtained non angle parameters with the arbitrary ones within a tolerance
-    non_angle_tolerance = 1.0  # Adjust the tolerance as needed
-    assert np.allclose(arbitary_non_angles,best_non_angles, atol=non_angle_tolerance), "Test failed!"
-
-    print("arbitary_angles:", arbitary_angles)
-    print("best_angles:", best_angles)
-    # Compare the obtained angle parameters with the arbitrary ones within a tolerance
-    angle_tolerance = 15  # Adjust the tolerance as needed
-    assert np.allclose(arbitary_angles, best_angles, atol=angle_tolerance), "Test failed!"
-
-
+    print("arbitary_params:", arbitrary_params)
+    print("best_params:", best_corr)
+    tolerance = 1.0  # Adjust the tolerance as needed
+    assert np.allclose(arbitrary_params,best_corr, atol=tolerance), "Test failed!"
     print("Test passed successfully!")
 
 # Run the test
