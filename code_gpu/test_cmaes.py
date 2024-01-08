@@ -3,6 +3,7 @@ import numpy as np
 import os
 import time
 import matplotlib.pyplot as plt
+import cupy as cp
 
 # Define the path and load data from a file
 path = '../data'
@@ -20,7 +21,7 @@ bot_cd = 54.6
 swa = [78, 90, 88, 84, 88, 85]
 
 initial_guess = np.array([dwx, dwz, i0, bkg, height, bot_cd] + swa)
-multiples = [1E-8, 1E-8, 1E-8, 1E-7, 1E-7, 1E-7] + len(swa) * [1E-5]
+multiples = [1E-18, 1E-18, 1E-18, 1E-17, 1E-17, 1E-17] + len(swa) * [1E-17]
 
 # Check if the number of initial guesses matches the number of multiples
 assert len(initial_guess) == len(multiples), f'Number of adds ({len(initial_guess)}) is different from number of multiples ({len(multiples)})'
@@ -31,7 +32,7 @@ qxs = qxs
 qzs = qzs
 
 # Define a range of population sizes
-nbpop = [400,500]#np.arange(10, 700, 50)
+nbpop = [500]#np.arange(10, 700, 50)
 # nbpop = [10, 11]
 
 # Initialize lists to store execution times
@@ -41,8 +42,20 @@ timeNP = []  # For non-parallel execution
 if __name__ == '__main__':  # This is necessary for parallel execution
     # Iterate through different population sizes
     for i in nbpop:
-        # Parallel execution
+        # gpu execution
         start = time.time()
+        data = cp.asarray(data)
+        qxs = cp.asarray(qxs)
+        qzs = cp.asarray(qzs)
+        multiples = cp.asarray(multiples)
+        initial_guess = cp.asarray(initial_guess)
+
+        print("data: ", data.shape)
+        print("qxs: ", qxs.shape)
+        print("qzs: ", qzs.shape)
+        print("multiples: ", multiples.shape)
+        print("initial_guess: ", initial_guess.shape)
+        
         best_corr, best_fitness = cmaes_parallel(data=data, qxs=qxs, qzs=qzs, sigma=100, ngen=30, popsize=i, mu=10,
                                                     n_default=len(initial_guess), multiples=multiples, restarts=0, verbose=False, tolhistfun=5e-5,
                                                     initial_guess=initial_guess, ftarget=None, dir_save=None, use_gpu=True)

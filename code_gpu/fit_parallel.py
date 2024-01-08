@@ -99,11 +99,16 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
     
     toolbox.register('evaluate', residual)
     
-    #register parallel map function to toolbox
-    mp.set_start_method('spawn', force=True)
-    parallel = mp.cpu_count()
-    pool = mp.Pool(parallel)
-    toolbox.register('map', pool.map)
+    if use_gpu:
+        toolbox.register('map', custom_map)
+    else:
+        #register parallel map function to toolbox
+        mp.set_start_method('spawn', force=True)
+        
+        #if gpu is used then process is set to 10
+        parallel = mp.cpu_count()   
+        pool = mp.Pool(parallel)
+        toolbox.register('map', pool.map)
 
     halloffame = tools.HallOfFame(1)
 
@@ -231,8 +236,9 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
          individual in generation])
     
     # convert to numpy arrays if using GPU
-    population_arr = population_arr.get()
-    fitness_arr = fitness_arr.get()
+    if use_gpu:
+        population_arr = population_arr.get()
+        fitness_arr = fitness_arr.get()
 
     population_fr = pd.DataFrame(np.column_stack((population_arr, fitness_arr)))
     if dir_save is not None:
