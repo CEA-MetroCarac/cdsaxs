@@ -181,6 +181,8 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
 
             # Evaluate the individuals
             fitnesses = toolbox.map(toolbox.evaluate, population)
+            fitnesses = fitnesses.get() if use_gpu else fitnesses
+            fitnesses = list(fitnesses)
 
             for ind, fit in zip(population, fitnesses):
                 ind.fitness.values = (fit,)  # tuple of length 1
@@ -428,19 +430,22 @@ class PickeableResidual():
             else:
                 return 10e7
         
-        dwx, dwz, intensity0, bkg, height, botcd, beta = simp[0], simp[1], simp[2], simp[3], simp[4], simp[5], xp.array(simp[6:])
-
+        
+        dwx, dwz, intensity0, bkg, height, botcd, beta = simp[:,0], simp[:,1], simp[:,2], simp[:,3], simp[:,4], simp[:,5], xp.array(simp[:,6:])#modified for gpu so that each variable is a list of arrays
         langle = xp.deg2rad(xp.asarray(beta))
         rangle = xp.deg2rad(xp.asarray(beta))
-        qxfit = []
-        for i in range(len(self.mqz)):
-            ff_core = stacked_trapezoids(self.mqx[i], self.mqz[i], 0, botcd, height, langle, rangle)
-            qxfit.append(ff_core)
+
+        qxfit = stacked_trapezoids(self.mqx, self.mqz, 0, botcd, height, langle, rangle)
+
+        # for i in range(len(self.mqz)):
+        #     ff_core = stacked_trapezoids(self.mqx[i], self.mqz[i], 0, botcd, height, langle, rangle)#not fit for gpu
+        #     qxfit.append(ff_core)
         qxfit = corrections_dwi0bk(qxfit, dwx, dwz, intensity0, bkg, self.mqx, self.mqz)
 
-        res = 0
-        for i in range(0, len(self.mdata), 1):
-            res += log_error(self.mdata[i], qxfit[i])
+        res = log_error(self.mdata, qxfit)
+
+        # res = xp.sum(log_error(self.mdata, qxfit))
+ 
 
         if self.mfit_mode == 'cmaes':
             return res
@@ -479,7 +484,9 @@ def fittingp_to_simp(fit_params, initial_guess, multiples):
     """
     nbc = len(initial_guess) - 6
     # multiples = multiples * nbc
-    simp = xp.asarray(multiples) * xp.asarray(fit_params) + xp.asarray(initial_guess)
+
+
+    simp = xp.asarray(multiples) * xp.asarray(fit_params) + xp.asarray(initial_guess)#fit for gpu
     if xp.any(simp[:6] < 0):
         return None
     if xp.any(simp[6:] < 0) or xp.any(simp[6:] > 90):
@@ -547,12 +554,15 @@ def corrections_dwi0bk(intensities, dw_factorx, dw_factorz,
     """
     # TODO: use qxqzi data format as in other function
 
-    intensities_corr = []
-    for intensity, qxi, qzi in zip(intensities, qxs, qzs):
-        dw_array = xp.exp(-((xp.asarray(qxi) * dw_factorx) ** 2 +
-                            (xp.asarray(qzi) * dw_factorz) ** 2))
-        intensities_corr.append(xp.asarray(intensity) * dw_array * scaling
-                                + bkg_cste)
+    # for intensity, qxi, qzi in zip(intensities, qxs, qzs):
+
+    qxs = xp.tile(qxs, dw_factorx.shape[0]).reshape(dw_factorx.shape[0], -1).T
+    qzs = xp.tile(qzs, dw_factorz.shape[0]).reshape(dw_factorz.shape[0], -1).T
+
+    dw_array = xp.exp(-(qxs * dw_factorx) ** 2 +
+                        (qzs * dw_factorz) ** 2)
+    intensities_corr = (xp.asarray(intensities.T) * dw_array * scaling
+                            + bkg_cste)
     return intensities_corr
 
 
@@ -578,22 +588,21 @@ def trapezoid_form_factor(qys, qzs, y1, y2, langle, rangle, height):
     form_factor: list of float
         List of the values of the form factor
     """
-    tan1 = xp.tan(langle)
-    tan2 = xp.tan(np.pi - rangle)
+    tan1 = xp.tan(langle)[:,:, xp.newaxis]
+    tan2 = xp.tan(np.pi - rangle)[:,:, xp.newaxis]
     val1 = qys + tan1 * qzs
     val2 = qys + tan2 * qzs
     with np.errstate(divide='ignore'):
-        form_factor = (tan1 * xp.exp(-1j * qys * y1) *
-                       (1 - xp.exp(-1j * height / tan1 * val1)) / val1)
-        form_factor -= (tan2 * xp.exp(-1j * qys * y2) *
-                        (1 - xp.exp(-1j * height / tan2 * val2)) / val2)
+        form_factor = (tan1 * xp.exp(-1j * qys * y1[:,:, xp.newaxis]) *
+                       (1 - xp.exp(-1j * height[:,:, xp.newaxis] / tan1 * val1)) / val1)
+        form_factor -= (tan2 * xp.exp(-1j * qys * y2[:,:, xp.newaxis]) *
+                        (1 - xp.exp(-1j * height[:,:, xp.newaxis] / tan2 * val2)) / val2)
         form_factor /= qys
 
     return form_factor
 
 
-def stacked_trapezoids(qys, qzs, y1, y2, height, langle,
-                       rangle=None, weight=None):
+def stacked_trapezoids(qys, qzs, y1, y2, height, langle, rangle=None, weight=None):
     """
     Simulation of the form factor of trapezoids at qx, qz position.
     Function extracted from XiCam (modified)
@@ -605,9 +614,9 @@ def stacked_trapezoids(qys, qzs, y1, y2, height, langle,
     y1, y2: floats
         Values of the bottom right/left (y1/y2) position respectively of
         the trapezoid such as y2 - y1 = width of the bottom of the trapezoid
-    height: float
+    height: list of floats or numpy.ndarray
         Height of the trapezoid
-    langle, rangle: list of floats
+    langle, rangle: 2d array of floats
         Each angle correspond to a trapezoid
     weight: list of floats
         To manage different material in the stack.
@@ -621,23 +630,38 @@ def stacked_trapezoids(qys, qzs, y1, y2, height, langle,
         raise TypeError('angles should be array')
 
     if rangle is not None:
-        if not langle.size == rangle.size:
-            raise ValueError('both angle array are not of same size')
+        if not langle.shape == rangle.shape:
+            raise ValueError('both angle arrays are not of the same shape')
     else:
         rangle = langle
 
     form_factor = xp.zeros(qzs.shape, dtype=complex)
-    # loop over all the angles
-    for i in range(langle.size):
-        shift = height * i
-        left, right = langle[i], rangle[i]
-        coeff = xp.exp(-1j * shift * qzs)
-        if weight is not None:
-            coeff *= weight[i] * (1. + 1j)
-        form_factor += trapezoid_form_factor(qys, qzs, y1, y2,
-                                             left, right, height) * coeff
-        y1 += height / xp.tan(left)
-        y2 += height / xp.tan(xp.pi - right)
+
+    #making an array of shift values which correspond to the number of trapezoids. newaxis to avoid broadcasting error
+    shift = height[:, xp.newaxis] * xp.arange(langle.shape[1])
+
+    #modify flattened qzs to match the shift so we can multiply them together without broadcasting error
+    qzs = xp.tile(qzs, langle.shape[1]).reshape(langle.shape[1], -1)
+    qys = xp.tile(qys, langle.shape[1]).reshape(langle.shape[1], -1)
+
+    #see the link to understand why shift was modified below https://chat.openai.com/share/652a25a8-17c4-4a77-90e9-6e4feb44eb4d
+    coeff = xp.exp(-1j * shift[:,:, xp.newaxis] * qzs)
+
+    #coeff should be a 3d array with shape (number of population, number of trapezoids, number of qz)
+
+    if weight is not None:
+        coeff *= weight[:, xp.newaxis] * (1. + 1j)
+
+    #we calculate y1 and y2 for each trapezoid and then send it to trapezoid_form_factor at once
+    height = xp.tile(height, langle.shape[1]).reshape(langle.shape[1], -1).T
+    y1 = height / xp.tan(langle)
+    y2 = height / xp.tan(np.pi - rangle)
+
+    #cumsum is used to calculate the cumulative sum of the y1 and y2 arrays
+    y1 = xp.cumsum(y1, axis=1)
+    y2 = xp.cumsum(y2, axis=1)
+
+    form_factor = xp.sum(trapezoid_form_factor(qys, qzs, y1, y2, langle, rangle, height) * coeff, axis=1)
 
     form_factor_intensity = xp.absolute(form_factor) ** 2
 
@@ -661,10 +685,13 @@ def log_error(exp_i_array, sim_i_array):
     error: float
         Sum of difference of log data, normalized by the number of data
     """
-    indice = exp_i_array > 0
-    error = xp.nansum(xp.abs((xp.log10(exp_i_array[indice]) -
-                              xp.log10(sim_i_array[indice]))))
-    error /= xp.count_nonzero(~xp.isnan(exp_i_array))
+    exp_i_array = xp.where(exp_i_array < 0, xp.nan, exp_i_array)
+    exp_i_array = xp.tile(exp_i_array, sim_i_array.shape[1]).reshape(sim_i_array.shape[0], -1)
+
+    error = xp.nansum(xp.abs((xp.log10(exp_i_array) -
+                              xp.log10(sim_i_array))), axis=0)
+
+    error /= xp.count_nonzero(~xp.isnan(exp_i_array), axis=0)
 
     return error
 
