@@ -36,7 +36,7 @@ qxs = qxs
 qzs = qzs
 
 # Define a range of population sizes
-nbpop = [1000]#np.arange(10, 700, 50)
+nbpop = [100]#np.arange(10, 700, 50)
 # nbpop = [10, 11]
 
 

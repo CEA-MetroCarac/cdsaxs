@@ -435,7 +435,7 @@ class PickeableResidual():
         langle = xp.deg2rad(xp.asarray(beta))
         rangle = xp.deg2rad(xp.asarray(beta))
 
-        qxfit = stacked_trapezoids(self.mqx, self.mqz, 0, botcd, height, langle, rangle)
+        qxfit = stacked_trapezoids(self.mqx, self.mqz, xp.zeros(botcd.shape), botcd, height, langle, rangle)
 
         # for i in range(len(self.mqz)):
         #     ff_core = stacked_trapezoids(self.mqx[i], self.mqz[i], 0, botcd, height, langle, rangle)#not fit for gpu
@@ -645,15 +645,19 @@ def stacked_trapezoids(qys, qzs, y1, y2, height, langle, rangle=None, weight=Non
     qys = xp.tile(qys, langle.shape[1]).reshape(langle.shape[1], -1)
 
     #see the link to understand why shift was modified below https://chat.openai.com/share/652a25a8-17c4-4a77-90e9-6e4feb44eb4d
-    coeff = xp.exp(-1j * shift[:,:, xp.newaxis] * qzs)
-
     #coeff should be a 3d array with shape (number of population, number of trapezoids, number of qz)
-
+    coeff = xp.exp(-1j * shift[:,:, xp.newaxis] * qzs)
+    
     if weight is not None:
         coeff *= weight[:, xp.newaxis] * (1. + 1j)
 
     #we calculate y1 and y2 for each trapezoid and then send it to trapezoid_form_factor at once
     height = xp.tile(height, langle.shape[1]).reshape(langle.shape[1], -1).T
+    
+    #tile y1 and y2 to match the shape of langle and rangle
+    y1 = xp.tile(y1, langle.shape[1]).reshape(langle.shape[1], -1).T
+    y2 = xp.tile(y2, langle.shape[1]).reshape(langle.shape[1], -1).T
+
     y1 = y1 + height / xp.tan(langle)
     y2 = y2 + height / xp.tan(np.pi - rangle)
 
