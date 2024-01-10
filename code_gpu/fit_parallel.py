@@ -654,8 +654,8 @@ def stacked_trapezoids(qys, qzs, y1, y2, height, langle, rangle=None, weight=Non
 
     #we calculate y1 and y2 for each trapezoid and then send it to trapezoid_form_factor at once
     height = xp.tile(height, langle.shape[1]).reshape(langle.shape[1], -1).T
-    y1 = height / xp.tan(langle)
-    y2 = height / xp.tan(np.pi - rangle)
+    y1 = y1 + height / xp.tan(langle)
+    y2 = y2 + height / xp.tan(np.pi - rangle)
 
     #cumsum is used to calculate the cumulative sum of the y1 and y2 arrays
     y1 = xp.cumsum(y1, axis=1)
