@@ -34,7 +34,7 @@ qxs = qxs
 qzs = qzs
 
 # Define a range of population sizes
-nbpop = [400,500]#np.arange(10, 700, 50)
+nbpop = [10]#np.arange(10, 700, 50)
 # nbpop = [10, 11]
 
 # Initialize lists to store execution times
@@ -46,7 +46,7 @@ if __name__ == '__main__':  # This is necessary for parallel execution
     for i in nbpop:
         # Parallel execution
         start = time.time()
-        best_corr, best_fitness = cmaes_parallel(data=data, qxs=qxs, qzs=qzs, sigma=100, ngen=30, popsize=i, mu=10,
+        best_corr, best_fitness = cmaes_parallel(data=data, qxs=qxs, qzs=qzs, sigma=100, ngen=10, popsize=i, mu=10,
                                                     n_default=len(initial_guess), multiples=multiples, restarts=0, verbose=False, tolhistfun=5e-5,
                                                     initial_guess=initial_guess, ftarget=None, dir_save=None)
         end = time.time()

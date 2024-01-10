@@ -36,7 +36,7 @@ qxs = qxs
 qzs = qzs
 
 # Define a range of population sizes
-nbpop = [100]#np.arange(10, 700, 50)
+nbpop = [10]#np.arange(10, 700, 50)
 # nbpop = [10, 11]
 
 
@@ -55,7 +55,7 @@ if __name__ == '__main__':  # This is necessary for parallel execution
             multiples = cp.asarray(multiples)
             initial_guess = cp.asarray(initial_guess)
 
-            best_corr, best_fitness = cmaes_parallel(data=data, qxs=qxs, qzs=qzs, sigma=100, ngen=100, popsize=i, mu=10,
+            best_corr, best_fitness = cmaes_parallel(data=data, qxs=qxs, qzs=qzs, sigma=100, ngen=30, popsize=i, mu=10,
                                                         n_default=len(initial_guess), multiples=multiples, restarts=0, verbose=False, tolhistfun=5e-5,
                                                         initial_guess=initial_guess, ftarget=None, dir_save=None, use_gpu=use_gpu)
             print(best_corr, best_fitness)
@@ -70,5 +70,5 @@ if __name__ == '__main__':  # This is necessary for parallel execution
         #                                             initial_guess=initial_guess, ftarget=None, dir_save=None, use_gpu=False)
         # end = time.time()
 
-        print(f'non-gpu execution time for {i} individuals: {end - start} seconds')
+        # print(f'non-gpu execution time for {i} individuals: {end - start} seconds')
 

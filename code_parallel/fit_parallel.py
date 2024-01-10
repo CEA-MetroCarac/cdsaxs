@@ -162,7 +162,9 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
 
             # Evaluate the individuals
             fitnesses = toolbox.map(toolbox.evaluate, population)
-
+            
+            print(fitnesses)
+            
             for ind, fit in zip(population, fitnesses):
                 ind.fitness.values = (fit,)  # tuple of length 1
             halloffame.update(population)

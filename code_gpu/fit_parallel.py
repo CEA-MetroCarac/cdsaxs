@@ -181,8 +181,9 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
 
             # Evaluate the individuals
             fitnesses = toolbox.map(toolbox.evaluate, population)
-            fitnesses = fitnesses.get() if use_gpu else fitnesses
-            fitnesses = list(fitnesses)
+
+            if use_gpu & isinstance(fitnesses, xp.ndarray):
+                fitnesses = fitnesses.get()
 
             for ind, fit in zip(population, fitnesses):
                 ind.fitness.values = (fit,)  # tuple of length 1
@@ -422,13 +423,15 @@ class PickeableResidual():
 
         """
   #         print('test', fit_params, self.minitial_guess, self.multiples)
-        simp = fittingp_to_simp(fit_params, initial_guess=self.minitial_guess, multiples=self.multiples, )
+        simp = fittingp_to_simp(fit_params, initial_guess=self.minitial_guess, multiples=self.multiples )
 
-        if simp is None:
-            if self.mfit_mode == "cmaes":
-                return xp.inf
-            else:
-                return 10e7
+        if xp.isinf(simp).any():
+            print("inf",simp)
+        # if simp is None:
+        #     if self.mfit_mode == "cmaes":
+        #         return xp.inf
+        #     else:
+        #         return 10e7
         
         
         dwx, dwz, intensity0, bkg, height, botcd, beta = simp[:,0], simp[:,1], simp[:,2], simp[:,3], simp[:,4], simp[:,5], xp.array(simp[:,6:])#modified for gpu so that each variable is a list of arrays
@@ -437,9 +440,6 @@ class PickeableResidual():
 
         qxfit = stacked_trapezoids(self.mqx, self.mqz, xp.zeros(botcd.shape), botcd, height, langle, rangle)
 
-        # for i in range(len(self.mqz)):
-        #     ff_core = stacked_trapezoids(self.mqx[i], self.mqz[i], 0, botcd, height, langle, rangle)#not fit for gpu
-        #     qxfit.append(ff_core)
         qxfit = corrections_dwi0bk(qxfit, dwx, dwz, intensity0, bkg, self.mqx, self.mqz)
 
         res = log_error(self.mdata, qxfit)
@@ -485,12 +485,11 @@ def fittingp_to_simp(fit_params, initial_guess, multiples):
     nbc = len(initial_guess) - 6
     # multiples = multiples * nbc
 
+    simp = xp.asarray(multiples) * xp.asarray(fit_params) + xp.asarray(initial_guess)
+    # print("simp", simp.shape)
 
-    simp = xp.asarray(multiples) * xp.asarray(fit_params) + xp.asarray(initial_guess)#fit for gpu
-    if xp.any(simp[:6] < 0):
-        return None
-    if xp.any(simp[6:] < 0) or xp.any(simp[6:] > 90):
-        return None
+    simp[:,:6] = np.where(simp[:,:6] < 0, xp.inf, simp[:,:6])
+    simp[:,6:] = np.where((simp[:,6:] < 0) | (simp[:,6:] > 90), xp.inf, simp[:,6:])
     
     return simp
 
@@ -563,7 +562,7 @@ def corrections_dwi0bk(intensities, dw_factorx, dw_factorz,
                         (qzs * dw_factorz) ** 2)
     intensities_corr = (xp.asarray(intensities.T) * dw_array * scaling
                             + bkg_cste)
-    return intensities_corr
+    return intensities_corr.T
 
 
 def trapezoid_form_factor(qys, qzs, y1, y2, langle, rangle, height):
@@ -689,13 +688,13 @@ def log_error(exp_i_array, sim_i_array):
     error: float
         Sum of difference of log data, normalized by the number of data
     """
-    exp_i_array = xp.where(exp_i_array < 0, xp.nan, exp_i_array)
-    exp_i_array = xp.tile(exp_i_array, sim_i_array.shape[1]).reshape(sim_i_array.shape[0], -1)
+    exp_i_array = xp.where(exp_i_array > 0, exp_i_array, xp.nan)
+    
+    exp_i_array = xp.tile(exp_i_array, sim_i_array.shape[0]).reshape(sim_i_array.shape[0], -1)
 
-    error = xp.nansum(xp.abs((xp.log10(exp_i_array) -
-                              xp.log10(sim_i_array))), axis=0)
+    error = xp.nansum(xp.abs((xp.log10(exp_i_array) - xp.log10(sim_i_array))), axis=1)
 
-    error /= xp.count_nonzero(~xp.isnan(exp_i_array), axis=0)
+    error /= xp.count_nonzero(~xp.isnan(exp_i_array), axis=1)
 
     return error
 
