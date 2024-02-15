@@ -421,20 +421,21 @@ class PickeableResidual():
         Returns
         -------
 
-        """
+        """ 
   #         print('test', fit_params, self.minitial_guess, self.multiples)
         simp = fittingp_to_simp(fit_params, initial_guess=self.minitial_guess, multiples=self.multiples )
 
-        if xp.isinf(simp).any():
-            print("inf",simp)
+        # if xp.isinf(simp).any():
+            # print("inf",simp)
         # if simp is None:
         #     if self.mfit_mode == "cmaes":
         #         return xp.inf
         #     else:
         #         return 10e7
         
-        
+  
         dwx, dwz, intensity0, bkg, height, botcd, beta = simp[:,0], simp[:,1], simp[:,2], simp[:,3], simp[:,4], simp[:,5], xp.array(simp[:,6:])#modified for gpu so that each variable is a list of arrays
+        
         langle = xp.deg2rad(xp.asarray(beta))
         rangle = xp.deg2rad(xp.asarray(beta))
 
@@ -486,11 +487,14 @@ def fittingp_to_simp(fit_params, initial_guess, multiples):
     # multiples = multiples * nbc
 
     simp = xp.asarray(multiples) * xp.asarray(fit_params) + xp.asarray(initial_guess)
-    # print("simp", simp.shape)
 
-    simp[:,:6] = np.where(simp[:,:6] < 0, xp.inf, simp[:,:6])
-    simp[:,6:] = np.where((simp[:,6:] < 0) | (simp[:,6:] > 90), xp.inf, simp[:,6:])
-    
+    if(len(simp.shape) == 2):
+        simp[:,:6] = xp.where(simp[:,:6] < 0, xp.inf, simp[:,:6])
+        simp[:,6:] = xp.where((simp[:,6:] <= 0) | (simp[:,6:] >= 90), xp.inf, simp[:,6:])
+    else:
+        simp[:6] = xp.where(simp[:6] < 0, xp.inf, simp[:6])
+        simp[6:] = xp.where((simp[6:] <= 0) | (simp[6:] >= 90.001), xp.inf, simp[6:])#added 0.001 to avoid rounding errors
+        
     return simp
 
 def fittingp_to_simp1(fit_params, initial_guess, multiples):
@@ -643,7 +647,6 @@ def stacked_trapezoids(qys, qzs, y1, y2, height, langle, rangle=None, weight=Non
     qzs = xp.tile(qzs, langle.shape[1]).reshape(langle.shape[1], -1)
     qys = xp.tile(qys, langle.shape[1]).reshape(langle.shape[1], -1)
 
-    #see the link to understand why shift was modified below https://chat.openai.com/share/652a25a8-17c4-4a77-90e9-6e4feb44eb4d
     #coeff should be a 3d array with shape (number of population, number of trapezoids, number of qz)
     coeff = xp.exp(-1j * shift[:,:, xp.newaxis] * qzs)
     
