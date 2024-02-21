@@ -43,7 +43,7 @@ def test_cmaes_with_arbitrary_data():
     # Call the cmaes function with arbitrary data
     if __name__ == "__main__":
         for i in range(2):
-            best_corr, best_fitness = cmaes(data=data, qxs=qxs, qzs=qzs, sigma=100, ngen=40, popsize=400, mu=10,
+            best_corr, best_fitness = cmaes(data=data, qxs=qxs, qzs=qzs, sigma=100, ngen=40, popsize=40, mu=10,
                                             n_default=len(arbitrary_params), multiples=multiples, restarts=0, verbose=False, tolhistfun=5e-5,
                                             initial_guess=arbitrary_params, ftarget=None, dir_save=None)
             print(best_corr, ":", arbitrary_params)

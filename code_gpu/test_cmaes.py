@@ -1,76 +1,71 @@
-from fit_parallel import cmaes as cmaes_parallel
 import numpy as np
-import os
-import time
-import matplotlib.pyplot as plt
-import cupy as cp
 from fit import stacked_trapezoids, corrections_dwi0bk
+from fit_parallel import cmaes
 import os
+import cupy as cp
 
-# Define the path and load data from a file
-path = '../data'
-qxs = np.loadtxt(os.path.join(path, 'qx_exp.txt'))
-qzs = np.loadtxt(os.path.join(path, 'qz_exp.txt'))
-data = np.loadtxt(os.path.join(path, 'i_exp.txt'))
+use_gpu = True
 
-qxs = qxs.flatten()
-qzs = qzs.flatten()
-data = data.flatten()
+pitch = 100 #nm distance between two trapezoidal bars
+qzs = np.linspace(-0.1, 0.1, 120)
+qxs = 2 * np.pi / pitch * np.ones_like(qzs)
 
 # Define initial parameters and multiples
 dwx = 0.1
 dwz = 0.1
-i0 = 0.203
+i0 = 10
 bkg = 0.1
 height = 23.48
 bot_cd = 54.6
-swa = [78, 90, 88, 84, 88, 85]
+swa = [87, 85, 83, 72]
 
-initial_guess = np.array([dwx, dwz, i0, bkg, height, bot_cd] + swa)
-multiples = [1E-18, 1E-18, 1E-18, 1E-17, 1E-17, 1E-17] + len(swa) * [1E-17]
+multiples = [1E-9, 1E-9, 1E-9, 1E-9, 1E-9, 1E-9] + len(swa) * [1E-9]
+
+if use_gpu:
+    qxs = cp.array(qxs)
+    qzs = cp.array(qzs)
+    multiples = cp.array(multiples)
 
 # Check if the number of initial guesses matches the number of multiples
-assert len(initial_guess) == len(multiples), f'Number of adds ({len(initial_guess)}) is different from number of multiples ({len(multiples)})'
+# assert len(initial_guess) == len(multiples), f'Number of adds ({len(initial_guess)}) is different from number of multiples ({len(multiples)})'
 
-# Define data arrays
-data = data
-qxs = qxs
-qzs = qzs
+# Generate data based on Fourier transform of arbitrary parameters using stacked_trapezoids
+def generate_arbitrary_data(qxs, qzs):
+    arbitrary_params = np.array([dwx, dwz, i0, bkg, height, bot_cd] + swa)
+    langle = np.deg2rad(np.asarray(swa))
+    rangle = np.deg2rad(np.asarray(swa))
 
-# Define a range of population sizes
-nbpop = [1000]#np.arange(10, 700, 50)
-# nbpop = [10, 11]
+    if use_gpu:
+        qxs = qxs.get()
+        qzs = qzs.get()
 
+    data = stacked_trapezoids(qxs, qzs, y1=0, y2=bot_cd, height=height, langle=langle)
+    data = corrections_dwi0bk(data, dwx, dwz, i0, bkg, qxs, qzs)
+    return data, arbitrary_params
 
-use_gpu = True
+def test_cmaes_with_arbitrary_data():
+    # Generate arbitrary data and parameters
+    data, arbitrary_params = generate_arbitrary_data(qxs, qzs)
 
-if __name__ == '__main__':  # This is necessary for parallel execution
-    # Iterate through different population sizes
+    if use_gpu:
+        data = cp.array(data)
+        arbitrary_params = cp.array(arbitrary_params)
+    else:
+        data = np.array(data)
+        arbitrary_params = np.array(arbitrary_params)
+
+    # Call the cmaes function with arbitrary data
+    if __name__ == "__main__":
+        for i in range(2):
+            best_corr, best_fitness = cmaes(data=data, qxs=qxs, qzs=qzs, sigma=100, ngen=40, popsize=70, mu=10,
+                                            n_default=len(arbitrary_params), multiples=multiples, restarts=0, verbose=False, tolhistfun=5e-5,
+                                            initial_guess=arbitrary_params, ftarget=None, dir_save=None, use_gpu=use_gpu)
     
-    for i in nbpop:
-        #non-gpu execution
-        start = time.time()
-        best_corr, best_fitness = cmaes_parallel(data=data, qxs=qxs, qzs=qzs, sigma=100, ngen=100, popsize=i, mu=10,
-                                                    n_default=len(initial_guess), multiples=multiples, restarts=0, verbose=False, tolhistfun=5e-5,
-                                                    initial_guess=initial_guess, ftarget=None, dir_save=None, use_gpu=False)
-        end = time.time()
-        print(best_corr, best_fitness)
+    print("arbitary_params:", arbitrary_params)
+    print("best_params:", best_corr)
+    tolerance = 1.0  # Adjust the tolerance as needed
+    assert np.allclose(arbitrary_params,best_corr, atol=tolerance), "Test failed!"
+    print("Test passed successfully!")
 
-        print(f'non-gpu execution time for {i} individuals: {end - start} seconds')
-
-        #gpu execution
-        if use_gpu:
-            start = time.time()
-            data = cp.asarray(data)
-            qxs = cp.asarray(qxs)
-            qzs = cp.asarray(qzs)
-            multiples = cp.asarray(multiples)
-            initial_guess = cp.asarray(initial_guess)
-
-            best_corr, best_fitness = cmaes_parallel(data=data, qxs=qxs, qzs=qzs, sigma=100, ngen=50, popsize=i, mu=10,
-                                                        n_default=len(initial_guess), multiples=multiples, restarts=0, verbose=False, tolhistfun=5e-5,
-                                                        initial_guess=initial_guess, ftarget=None, dir_save=None, use_gpu=use_gpu)
-            print(best_corr, best_fitness)
-            end = time.time()
-
-            print(f'gpu execution time for {i} individuals: {end - start} seconds')
+# Run the test
+test_cmaes_with_arbitrary_data()

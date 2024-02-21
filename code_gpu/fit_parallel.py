@@ -201,7 +201,6 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
             if last_best_fitnesses[-1] is None:
                 last_best_fitnesses.pop()
                 pass
-            # print("last_best_fitnesses :", last_best_fitnesses)
             delta = max(last_best_fitnesses) - min(last_best_fitnesses)
             cond1 = tolhistfun is not None
             cond2 = len(last_best_fitnesses) == last_best_fitnesses.maxlen
@@ -425,9 +424,11 @@ class PickeableResidual():
         qxfit = corrections_dwi0bk(qxfit, dwx, dwz, intensity0, bkg, self.mqx, self.mqz)
 
         #create a mask to give inf values for the arrays in simp that contains inf
-        mask = xp.where(xp.any(xp.isinf(simp), axis=1), False, True)
+        mask = xp.where(xp.any(xp.isnan(simp), axis=1), False, True)
+        # print("mask", mask)
 
         res = xp.where(mask, log_error(self.mdata, qxfit), xp.inf)
+        # print("res", res)
 
         if self.mfit_mode == 'cmaes':
             return res
@@ -470,11 +471,11 @@ def fittingp_to_simp(fit_params, initial_guess, multiples):
     simp = xp.asarray(multiples) * xp.asarray(fit_params) + xp.asarray(initial_guess)
 
     if(len(simp.shape) == 2):
-        simp[:,:6] = xp.where(simp[:,:6] < 0, xp.inf, simp[:,:6])
-        simp[:,6:] = xp.where((simp[:,6:] <= 0) | (simp[:,6:] >= 91), xp.inf, simp[:,6:])
+        simp[:,:6] = xp.where(simp[:,:6] < 0, xp.nan, simp[:,:6])
+        simp[:,6:] = xp.where((simp[:,6:] <= 0) | (simp[:,6:] >= 91), xp.nan, simp[:,6:])
     else:
-        simp[:6] = xp.where(simp[:6] < 0, xp.inf, simp[:6])
-        simp[6:] = xp.where((simp[6:] <= 0) | (simp[6:] >= 91), xp.inf, simp[6:])#added 1 to 90 to avoid rounding errors
+        simp[:6] = xp.where(simp[:6] < 0, xp.nan, simp[:6])
+        simp[6:] = xp.where((simp[6:] <= 0) | (simp[6:] >= 91), xp.nan, simp[6:])#added 1 to 90 to avoid rounding errors
         
     return simp
 
