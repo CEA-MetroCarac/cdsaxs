@@ -4,6 +4,8 @@ import os
 import time
 import matplotlib.pyplot as plt
 import cupy as cp
+from fit import stacked_trapezoids, corrections_dwi0bk
+import os
 
 # Define the path and load data from a file
 path = '../data'
@@ -36,7 +38,7 @@ qxs = qxs
 qzs = qzs
 
 # Define a range of population sizes
-nbpop = [10]#np.arange(10, 700, 50)
+nbpop = [1000]#np.arange(10, 700, 50)
 # nbpop = [10, 11]
 
 
@@ -44,31 +46,31 @@ use_gpu = True
 
 if __name__ == '__main__':  # This is necessary for parallel execution
     # Iterate through different population sizes
+    
     for i in nbpop:
-        # gpu execution
-
-        # if use_gpu:
-        #     start = time.time()
-        #     data = cp.asarray(data)
-        #     qxs = cp.asarray(qxs)
-        #     qzs = cp.asarray(qzs)
-        #     multiples = cp.asarray(multiples)
-        #     initial_guess = cp.asarray(initial_guess)
-
-        #     best_corr, best_fitness = cmaes_parallel(data=data, qxs=qxs, qzs=qzs, sigma=100, ngen=30, popsize=i, mu=10,
-        #                                                 n_default=len(initial_guess), multiples=multiples, restarts=0, verbose=False, tolhistfun=5e-5,
-        #                                                 initial_guess=initial_guess, ftarget=None, dir_save=None, use_gpu=use_gpu)
-        #     print(best_corr, best_fitness)
-        #     end = time.time()
-
-        #     print(f'gpu execution time for {i} individuals: {end - start} seconds')
-
         #non-gpu execution
         start = time.time()
-        best_corr, best_fitness = cmaes_parallel(data=data, qxs=qxs, qzs=qzs, sigma=100, ngen=30, popsize=i, mu=10,
+        best_corr, best_fitness = cmaes_parallel(data=data, qxs=qxs, qzs=qzs, sigma=100, ngen=100, popsize=i, mu=10,
                                                     n_default=len(initial_guess), multiples=multiples, restarts=0, verbose=False, tolhistfun=5e-5,
                                                     initial_guess=initial_guess, ftarget=None, dir_save=None, use_gpu=False)
         end = time.time()
+        print(best_corr, best_fitness)
 
         print(f'non-gpu execution time for {i} individuals: {end - start} seconds')
 
+        #gpu execution
+        if use_gpu:
+            start = time.time()
+            data = cp.asarray(data)
+            qxs = cp.asarray(qxs)
+            qzs = cp.asarray(qzs)
+            multiples = cp.asarray(multiples)
+            initial_guess = cp.asarray(initial_guess)
+
+            best_corr, best_fitness = cmaes_parallel(data=data, qxs=qxs, qzs=qzs, sigma=100, ngen=50, popsize=i, mu=10,
+                                                        n_default=len(initial_guess), multiples=multiples, restarts=0, verbose=False, tolhistfun=5e-5,
+                                                        initial_guess=initial_guess, ftarget=None, dir_save=None, use_gpu=use_gpu)
+            print(best_corr, best_fitness)
+            end = time.time()
+
+            print(f'gpu execution time for {i} individuals: {end - start} seconds')

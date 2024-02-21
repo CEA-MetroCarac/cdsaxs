@@ -21,7 +21,6 @@ import scipy.interpolate
 import emcee
 import sys
 import multiprocessing as mp
-from my_map import custom_map
 
 
 creator.create('FitnessMin', dbase.Fitness, weights=(-1.,))  # to minim. fitness
@@ -84,6 +83,8 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
     """
     # declare a global variable xp that will be changed to cp or np depending on the use_gpu in the cmaes function
     global xp
+    xp = np
+
     if use_gpu & cp.cuda.is_available():
         xp = cp
 
@@ -99,16 +100,6 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
     
     toolbox.register('evaluate', residual)
     
-    if use_gpu:
-        toolbox.register('map', custom_map)
-    else:
-        #register parallel map function to toolbox
-        mp.set_start_method('spawn', force=True)
-        
-        #if gpu is used then process is set to 10
-        parallel = mp.cpu_count()   
-        pool = mp.Pool(parallel)
-        toolbox.register('map', pool.map)
 
     halloffame = tools.HallOfFame(1)
 
@@ -180,7 +171,7 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
             population_list.append(population)
 
             # Evaluate the individuals
-            fitnesses = toolbox.map(toolbox.evaluate, population)
+            fitnesses = toolbox.evaluate(population)
 
             if use_gpu & isinstance(fitnesses, xp.ndarray):
                 fitnesses = fitnesses.get()
@@ -210,7 +201,7 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
             if last_best_fitnesses[-1] is None:
                 last_best_fitnesses.pop()
                 pass
-            # print(last_best_fitnesses)
+            # print("last_best_fitnesses :", last_best_fitnesses)
             delta = max(last_best_fitnesses) - min(last_best_fitnesses)
             cond1 = tolhistfun is not None
             cond2 = len(last_best_fitnesses) == last_best_fitnesses.maxlen
@@ -305,28 +296,27 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
         
         print('{} parameters'.format(N))
     
-    with mp.Pool(processes=process) as pool:
-        if gaussian_move:
-            # Use Gaussian move for the proposal distribution
-            individuals = np.asarray([np.random.uniform(0, 10e-10, N) for _ in range(nwalkers)])
-            np.asarray(individuals)
-            Sampler = emcee.EnsembleSampler(nwalkers, N, residual, moves=emcee.moves.GaussianMove(sigma), pool=pool)
 
-            Sampler.run_mcmc(individuals, nsteps, progress=True)
+    if gaussian_move:
+        # Use Gaussian move for the proposal distribution
+        individuals = np.asarray([np.random.uniform(0, 10e-10, N) for _ in range(nwalkers)])
+        np.asarray(individuals)
+        Sampler = emcee.EnsembleSampler(nwalkers, N, residual, moves=emcee.moves.GaussianMove(sigma), pool=None, vectorize=True)
 
-            if verbose:
-                do_verbose(Sampler)
-        else:
-            # Use the default stretch move
-            individuals = [[np.random.normal(loc=0, scale=s) for s in sigma] for _ in range(nwalkers)]
-            Sampler = emcee.EnsembleSampler(nwalkers, N, residual, pool=pool)
-            
-            Sampler.run_mcmc(individuals, nsteps, progress=True)
+        Sampler.run_mcmc(individuals, nsteps, progress=True)
 
-            if verbose:
-                do_verbose(Sampler)
+        if verbose:
+            do_verbose(Sampler)
+    else:
+        # Use the default stretch move
+        individuals = [[np.random.normal(loc=0, scale=s) for s in sigma] for _ in range(nwalkers)]
+        Sampler = emcee.EnsembleSampler(nwalkers, N, residual, pool=None, vectorize=True)
+        
+        Sampler.run_mcmc(individuals, nsteps, progress=True)
+
+        if verbose:
+            do_verbose(Sampler)
     
-    pool.join()
     
     # Data processing and analysis
     s = Sampler.chain.shape
@@ -422,17 +412,8 @@ class PickeableResidual():
         -------
 
         """ 
-  #         print('test', fit_params, self.minitial_guess, self.multiples)
         simp = fittingp_to_simp(fit_params, initial_guess=self.minitial_guess, multiples=self.multiples )
 
-        # if xp.isinf(simp).any():
-            # print("inf",simp)
-        # if simp is None:
-        #     if self.mfit_mode == "cmaes":
-        #         return xp.inf
-        #     else:
-        #         return 10e7
-        
   
         dwx, dwz, intensity0, bkg, height, botcd, beta = simp[:,0], simp[:,1], simp[:,2], simp[:,3], simp[:,4], simp[:,5], xp.array(simp[:,6:])#modified for gpu so that each variable is a list of arrays
         
@@ -443,10 +424,10 @@ class PickeableResidual():
 
         qxfit = corrections_dwi0bk(qxfit, dwx, dwz, intensity0, bkg, self.mqx, self.mqz)
 
-        res = log_error(self.mdata, qxfit)
+        #create a mask to give inf values for the arrays in simp that contains inf
+        mask = xp.where(xp.any(xp.isinf(simp), axis=1), False, True)
 
-        # res = xp.sum(log_error(self.mdata, qxfit))
- 
+        res = xp.where(mask, log_error(self.mdata, qxfit), xp.inf)
 
         if self.mfit_mode == 'cmaes':
             return res
@@ -490,10 +471,10 @@ def fittingp_to_simp(fit_params, initial_guess, multiples):
 
     if(len(simp.shape) == 2):
         simp[:,:6] = xp.where(simp[:,:6] < 0, xp.inf, simp[:,:6])
-        simp[:,6:] = xp.where((simp[:,6:] <= 0) | (simp[:,6:] >= 90), xp.inf, simp[:,6:])
+        simp[:,6:] = xp.where((simp[:,6:] <= 0) | (simp[:,6:] >= 91), xp.inf, simp[:,6:])
     else:
         simp[:6] = xp.where(simp[:6] < 0, xp.inf, simp[:6])
-        simp[6:] = xp.where((simp[6:] <= 0) | (simp[6:] >= 90.001), xp.inf, simp[6:])#added 0.001 to avoid rounding errors
+        simp[6:] = xp.where((simp[6:] <= 0) | (simp[6:] >= 91), xp.inf, simp[6:])#added 1 to 90 to avoid rounding errors
         
     return simp
 

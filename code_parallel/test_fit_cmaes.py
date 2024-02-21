@@ -11,8 +11,6 @@ qxs = np.loadtxt(os.path.join(path, 'qx_exp.txt'))
 qzs = np.loadtxt(os.path.join(path, 'qz_exp.txt'))
 data = np.loadtxt(os.path.join(path, 'i_exp.txt'))
 
-print(qxs.shape, qzs.shape, data.shape)
-
 # Define initial parameters and multiples
 dwx = 0.1
 dwz = 0.1
@@ -34,7 +32,7 @@ qxs = qxs
 qzs = qzs
 
 # Define a range of population sizes
-nbpop = [10]#np.arange(10, 700, 50)
+nbpop = [50]#np.arange(10, 700, 50)
 # nbpop = [10, 11]
 
 # Initialize lists to store execution times
@@ -53,6 +51,6 @@ if __name__ == '__main__':  # This is necessary for parallel execution
         timeP.append(end - start)
 
         
-        # print(best_corr, ":", initial_guess)
+        print(best_corr, ":", initial_guess)
         print(f'execution time for {i} individuals: {end - start} seconds')
 
