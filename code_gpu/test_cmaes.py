@@ -1,6 +1,5 @@
 import numpy as np
-from fit import stacked_trapezoids, corrections_dwi0bk
-from fit_parallel import cmaes
+from fit_parallel import cmaes, stacked_trapezoids, corrections_dwi0bk
 import os
 import cupy as cp
 
@@ -11,15 +10,15 @@ qzs = np.linspace(-0.1, 0.1, 120)
 qxs = 2 * np.pi / pitch * np.ones_like(qzs)
 
 # Define initial parameters and multiples
-dwx = 0.1
-dwz = 0.1
+dwx = [0.1]
+dwz = [0.1]
 i0 = 10
 bkg = 0.1
-height = 23.48
-bot_cd = 54.6
-swa = [87, 85, 83, 72]
+height = [23.48, 23.45]
+bot_cd = [54.6, 54.2]
+swa = [[85],[87]]
 
-multiples = [1E-9, 1E-9, 1E-9, 1E-9, 1E-9, 1E-9] + len(swa) * [1E-9]
+multiples = [1E-7, 1E-7, 1E-7, 1E-7, 1E-7, 1E-7] + len(swa[0]) * [1E-9]
 
 if use_gpu:
     qxs = cp.array(qxs)
@@ -31,7 +30,7 @@ if use_gpu:
 
 # Generate data based on Fourier transform of arbitrary parameters using stacked_trapezoids
 def generate_arbitrary_data(qxs, qzs):
-    arbitrary_params = np.array([dwx, dwz, i0, bkg, height, bot_cd] + swa)
+    arbitrary_params = np.array([dwx[0], dwz[0], i0, bkg, height[0], bot_cd[0]] + swa[0])
     langle = np.deg2rad(np.asarray(swa))
     rangle = np.deg2rad(np.asarray(swa))
 
@@ -39,7 +38,10 @@ def generate_arbitrary_data(qxs, qzs):
         qxs = qxs.get()
         qzs = qzs.get()
 
+
     data = stacked_trapezoids(qxs, qzs, y1=0, y2=bot_cd, height=height, langle=langle)
+
+
     data = corrections_dwi0bk(data, dwx, dwz, i0, bkg, qxs, qzs)
     return data, arbitrary_params
 
@@ -56,8 +58,8 @@ def test_cmaes_with_arbitrary_data():
 
     # Call the cmaes function with arbitrary data
     if __name__ == "__main__":
-        for i in range(2):
-            best_corr, best_fitness = cmaes(data=data, qxs=qxs, qzs=qzs, sigma=100, ngen=40, popsize=70, mu=10,
+        
+        best_corr, best_fitness = cmaes(data=data[0], qxs=qxs, qzs=qzs, sigma=100, ngen=1000, popsize=400, mu=10,
                                             n_default=len(arbitrary_params), multiples=multiples, restarts=0, verbose=False, tolhistfun=5e-5,
                                             initial_guess=arbitrary_params, ftarget=None, dir_save=None, use_gpu=use_gpu)
     

@@ -20,9 +20,9 @@ i0 = 10
 bkg = 0.1
 height = 23.48
 bot_cd = 54.6
-swa = [90]
+swa = [85]
 
-multiples = [1E-9, 1E-9, 1E-9, 1E-9, 1E-9, 1E-9] + len(swa) * [1E-9]
+multiples = [1E-7, 1E-7, 1E-7, 1E-7, 1E-7, 1E-7] + len(swa) * [1E-9]
 
 # Check if the number of initial guesses matches the number of multiples
 # assert len(initial_guess) == len(multiples), f'Number of adds ({len(initial_guess)}) is different from number of multiples ({len(multiples)})'
@@ -42,11 +42,10 @@ def test_cmaes_with_arbitrary_data():
 
     # Call the cmaes function with arbitrary data
     if __name__ == "__main__":
-        for i in range(2):
-            best_corr, best_fitness = cmaes(data=data, qxs=qxs, qzs=qzs, sigma=100, ngen=40, popsize=40, mu=10,
+        for i in range(1):
+            best_corr, best_fitness = cmaes(data=data, qxs=qxs, qzs=qzs, sigma=100, ngen=1000, popsize=400, mu=10,
                                             n_default=len(arbitrary_params), multiples=multiples, restarts=0, verbose=False, tolhistfun=5e-5,
                                             initial_guess=arbitrary_params, ftarget=None, dir_save=None)
-            print(best_corr, ":", arbitrary_params)
     
     # Split the obtained parameters into non-angles and angles because those are non compatible for only one test
 

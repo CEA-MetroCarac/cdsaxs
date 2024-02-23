@@ -202,12 +202,15 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
                 last_best_fitnesses.pop()
                 pass
             delta = max(last_best_fitnesses) - min(last_best_fitnesses)
+
             cond1 = tolhistfun is not None
             cond2 = len(last_best_fitnesses) == last_best_fitnesses.maxlen
             cond3 = delta < tolhistfun
-            if cond1 and cond2 and cond3:
-                print(msg.format("tolhistfun", cur_gen))
-                break
+
+            # if cond1 and cond2 and cond3:
+            #     print(msg.format("tolhistfun", cur_gen))
+            #     break
+
         else:
             print(msg.format("ngen", cur_gen))
 
@@ -412,7 +415,6 @@ class PickeableResidual():
 
         """ 
         simp = fittingp_to_simp(fit_params, initial_guess=self.minitial_guess, multiples=self.multiples )
-
   
         dwx, dwz, intensity0, bkg, height, botcd, beta = simp[:,0], simp[:,1], simp[:,2], simp[:,3], simp[:,4], simp[:,5], xp.array(simp[:,6:])#modified for gpu so that each variable is a list of arrays
         
@@ -423,12 +425,8 @@ class PickeableResidual():
 
         qxfit = corrections_dwi0bk(qxfit, dwx, dwz, intensity0, bkg, self.mqx, self.mqz)
 
-        #create a mask to give inf values for the arrays in simp that contains inf
-        mask = xp.where(xp.any(xp.isnan(simp), axis=1), False, True)
-        # print("mask", mask)
 
-        res = xp.where(mask, log_error(self.mdata, qxfit), xp.inf)
-        # print("res", res)
+        res = log_error(self.mdata, qxfit)
 
         if self.mfit_mode == 'cmaes':
             return res
@@ -541,8 +539,8 @@ def corrections_dwi0bk(intensities, dw_factorx, dw_factorz,
 
     # for intensity, qxi, qzi in zip(intensities, qxs, qzs):
 
-    qxs = xp.tile(qxs, dw_factorx.shape[0]).reshape(dw_factorx.shape[0], -1).T
-    qzs = xp.tile(qzs, dw_factorz.shape[0]).reshape(dw_factorz.shape[0], -1).T
+    qxs = xp.tile(qxs, xp.asarray(dw_factorx).shape[0]).reshape(xp.asarray(dw_factorx).shape[0], -1).T
+    qzs = xp.tile(qzs, xp.asarray(dw_factorz).shape[0]).reshape(xp.asarray(dw_factorz).shape[0], -1).T
 
     dw_array = xp.exp(-(qxs * dw_factorx) ** 2 +
                         (qzs * dw_factorz) ** 2)
@@ -623,7 +621,7 @@ def stacked_trapezoids(qys, qzs, y1, y2, height, langle, rangle=None, weight=Non
     form_factor = xp.zeros(qzs.shape, dtype=complex)
 
     #making an array of shift values which correspond to the number of trapezoids. newaxis to avoid broadcasting error
-    shift = height[:, xp.newaxis] * xp.arange(langle.shape[1])
+    shift = xp.asarray(height)[:, xp.newaxis] * xp.arange(langle.shape[1])
 
     #modify flattened qzs to match the shift so we can multiply them together without broadcasting error
     qzs = xp.tile(qzs, langle.shape[1]).reshape(langle.shape[1], -1)
@@ -680,6 +678,8 @@ def log_error(exp_i_array, sim_i_array):
     error = xp.nansum(xp.abs((xp.log10(exp_i_array) - xp.log10(sim_i_array))), axis=1)
 
     error /= xp.count_nonzero(~xp.isnan(exp_i_array), axis=1)
+
+    error = xp.where(error == 0, xp.inf, error)
 
     return error
 
