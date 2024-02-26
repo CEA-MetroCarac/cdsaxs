@@ -1,61 +1,93 @@
-from fit_parallel import mcmc
 import numpy as np
+from fit_parallel import mcmc, stacked_trapezoids, corrections_dwi0bk
 import os
-import time
-import matplotlib.pyplot as plt
 import cupy as cp
-
-# Define the path and load data from a file
-path = '../data'
-qxs = np.loadtxt(os.path.join(path, 'qx_exp.txt'))
-qzs = np.loadtxt(os.path.join(path, 'qz_exp.txt'))
-data = np.loadtxt(os.path.join(path, 'i_exp.txt'))
-
-qxs = qxs.flatten()
-qzs = qzs.flatten()
-data = data.flatten()
-
-# Define initial parameters and multiples
-dwx = 0.1
-dwz = 0.1
-i0 = 0.203
-bkg = 0.1
-height = 23.48
-bot_cd = 54.6
-swa = [78, 90, 88, 84, 88, 85]
-
-initial_guess = np.array([dwx, dwz, i0, bkg, height, bot_cd] + swa)
-multiples = [1E-18, 1E-18, 1E-18, 1E-17, 1E-17, 1E-17] + len(swa) * [1E-17]
-
-# Check if the number of initial guesses matches the number of multiples
-assert len(initial_guess) == len(multiples), f'Number of adds ({len(initial_guess)}) is different from number of multiples ({len(multiples)})'
-
-# Define data arrays
-data = data
-qxs = qxs
-qzs = qzs
-
-sigma = 1E-7 * np.asarray(initial_guess)
+import matplotlib.pyplot as plt
 
 use_gpu = True
 
-if __name__ == '__main__':  # This is necessary for parallel execution
-    # Iterate through different population sizes
+pitch = 100 #nm distance between two trapezoidal bars
+qzs = np.linspace(-0.8, 0.8, 120)
+qxs = 2 * np.pi / pitch * np.ones_like(qzs)
+
+# Define initial parameters and multiples
+dwx = [0.1]
+dwz = [0.1]
+i0 = 10
+bkg = 0.1
+height = [23.48, 23.45]
+bot_cd = [54.6, 54.2]
+swa = [[85],[87]]
+
+multiples = [1E-7, 1E-7, 1E-7, 1E-7, 1E-7, 1E-7] + len(swa[0]) * [1E-9]
+
+if use_gpu:
+    qxs = cp.array(qxs)
+    qzs = cp.array(qzs)
+    multiples = cp.array(multiples)
+
+# Check if the number of initial guesses matches the number of multiples
+# assert len(initial_guess) == len(multiples), f'Number of adds ({len(initial_guess)}) is different from number of multiples ({len(multiples)})'
+
+# Generate data based on Fourier transform of arbitrary parameters using stacked_trapezoids
+def generate_arbitrary_data(qxs, qzs):
+    arbitrary_params = np.array([dwx[0], dwz[0], i0, bkg, height[0], bot_cd[0]] + swa[0])
+    langle = np.deg2rad(np.asarray(swa))
+    rangle = np.deg2rad(np.asarray(swa))
+
+    if (use_gpu):
+        qxs = qxs.get()
+        qzs = qzs.get()
+
+
+    data = stacked_trapezoids(qxs, qzs, y1=0, y2=bot_cd, height=height, langle=langle)
+
+
+    data = corrections_dwi0bk(data, dwx, dwz, i0, bkg, qxs, qzs)
+
+    return data, arbitrary_params
+
+
+
+def test_mcmc_with_arbitrary_data():
+    # Generate arbitrary data and parameters
+    data, arbitrary_params = generate_arbitrary_data(qxs, qzs)
+
+    if use_gpu:
+        data = cp.asarray(data)
+        arbitrary_params = cp.asarray(arbitrary_params)
+        sigma = 1E-7 * cp.asarray(arbitrary_params)
+    else:
+        data = np.asarray(data)
+        arbitrary_params = np.asarray(arbitrary_params)
+        sigma = 1E-7 * np.asarray(arbitrary_params)
+
+    # Call the cmaes function with arbitrary data
+    if __name__ == "__main__":
+
+        
+        
+        best_corr = mcmc(data=data[0],
+                            qxs=qxs,
+                            qzs=qzs,
+                            initial_guess=arbitrary_params,
+                            multiples=multiples,
+                            N=len(arbitrary_params),
+                            sigma=sigma,
+                            nsteps=700,
+                            nwalkers=25,  # needs to be higher than 2 x N
+                            gaussian_move=False,
+                            parallel=False,
+                            seed=None,
+                            verbose=True,
+                            test=True,
+                            use_gpu=use_gpu)
     
-    best_corr = mcmc(data=data,
-                        qxs=qxs,
-                        qzs=qzs,
-                        initial_guess=np.asarray(initial_guess),
-                        multiples=np.asarray(multiples),
-                        N=len(initial_guess),
-                        sigma=sigma,
-                        nsteps=50,
-                        nwalkers=120,  # needs to be higher than 2 x N
-                        gaussian_move=False,
-                        parallel=False,
-                        seed=None,
-                        verbose=True,
-                        test=True)
+    print("arbitary_params:", arbitrary_params)
+    print("best_params:", best_corr)
+    tolerance = 1.0  # Adjust the tolerance as needed
+    assert np.allclose(arbitrary_params,best_corr, atol=tolerance), "Test failed!"
+    print("Test passed successfully!")
 
-    print("Best correlation: ", best_corr)
-
+# Run the test
+test_mcmc_with_arbitrary_data()

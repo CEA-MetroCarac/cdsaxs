@@ -193,9 +193,9 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
             cond1 = tolhistfun is not None
             cond2 = len(last_best_fitnesses) == last_best_fitnesses.maxlen
             cond3 = delta < tolhistfun
-            # if cond1 and cond2 and cond3:
-            #     print(msg.format("tolhistfun", cur_gen))
-            #     break
+            if cond1 and cond2 and cond3:
+                print(msg.format("tolhistfun", cur_gen))
+                break
         else:
             print(msg.format("ngen", cur_gen))
 

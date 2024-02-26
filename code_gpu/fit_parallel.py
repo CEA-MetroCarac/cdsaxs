@@ -207,9 +207,9 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
             cond2 = len(last_best_fitnesses) == last_best_fitnesses.maxlen
             cond3 = delta < tolhistfun
 
-            # if cond1 and cond2 and cond3:
-            #     print(msg.format("tolhistfun", cur_gen))
-            #     break
+            if cond1 and cond2 and cond3:
+                print(msg.format("tolhistfun", cur_gen))
+                break
 
         else:
             print(msg.format("ngen", cur_gen))
@@ -243,7 +243,7 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
     return best_corr, best_fitness
 
 
-def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, gaussian_move=False, parallel=True, seed=None, verbose=True, test=False):
+def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, gaussian_move=False, parallel=True, seed=None, verbose=True, test=False, use_gpu=False):
     """
     Fit data using the emcee package's implementation of the MCMC algorithm.
 
@@ -270,16 +270,20 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
         minfitness_each_gen (numpy.ndarray): Minimum fitness at each generation.
         Sampler (emcee.EnsembleSampler): Instance of emcee.Sampler with detailed output of the algorithm.
     """
+    global xp
+    xp = np
+
+    if use_gpu & cp.cuda.is_available():
+        xp = cp
     
     # Create a PickeableResidual instance for data fitting
     residual = PickeableResidual(data=data, qxs=qxs, qzs=qzs, initial_guess=initial_guess, multiples=multiples, fit_mode='mcmc')
-    process = mp.cpu_count()
 
     def do_verbose(Sampler):
         if hasattr(Sampler, 'acceptance_fraction'):
-            print('Acceptance fraction: ' + str(np.mean(Sampler.acceptance_fraction)))
+            print('Acceptance fraction: ' + str(xp.mean(Sampler.acceptance_fraction)))
         else:
-            print('Acceptance fraction: ' + str(np.mean([Sampler.acceptance_fraction for Sampler in Sampler])))
+            print('Acceptance fraction: ' + str(xp.mean([Sampler.acceptance_fraction for Sampler in Sampler])))
         sys.stdout.flush()
     
     # Empirical factor to modify MCMC acceptance rate
@@ -289,7 +293,7 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
     if seed is None:
         seed = randrange(2 ** 32)
     seed = seed
-    np.random.seed(seed)
+    xp.random.seed(seed)
     
     if hasattr(sigma, '__len__'):
         sigma = sigma
@@ -301,8 +305,7 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
 
     if gaussian_move:
         # Use Gaussian move for the proposal distribution
-        individuals = np.asarray([np.random.uniform(0, 10e-10, N) for _ in range(nwalkers)])
-        np.asarray(individuals)
+        individuals = [xp.random.uniform(0, 10e-10, N) for _ in range(nwalkers)]
         Sampler = emcee.EnsembleSampler(nwalkers, N, residual, moves=emcee.moves.GaussianMove(sigma), pool=None, vectorize=True)
 
         Sampler.run_mcmc(individuals, nsteps, progress=True)
@@ -311,9 +314,14 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
             do_verbose(Sampler)
     else:
         # Use the default stretch move
+
+            #here sampler needs to get a list or numpy arrays so we use np not xp
+        if use_gpu:
+            sigma = sigma.get()
+
         individuals = [[np.random.normal(loc=0, scale=s) for s in sigma] for _ in range(nwalkers)]
         Sampler = emcee.EnsembleSampler(nwalkers, N, residual, pool=None, vectorize=True)
-        
+              
         Sampler.run_mcmc(individuals, nsteps, progress=True)
 
         if verbose:
@@ -322,9 +330,9 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
     
     # Data processing and analysis
     s = Sampler.chain.shape
-    flatchain = np.transpose(Sampler.chain, axes=[1, 0, 2]).reshape(s[0] * s[1], s[2])
+    flatchain = xp.transpose(Sampler.chain, axes=[1, 0, 2]).reshape(s[0] * s[1], s[2])
     flatlnprobability = Sampler.lnprobability.transpose().flatten()
-    minfitness_each_gen = np.min(-Sampler.lnprobability * c, axis=0)
+    minfitness_each_gen = xp.min(-Sampler.lnprobability * c, axis=0)
     
     flatfitness = -flatlnprobability * c
     best_index = np.argmin(flatfitness)
@@ -334,6 +342,9 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
     
     
     population_array = fittingp_to_simp1(flatchain, initial_guess=initial_guess, multiples=multiples)
+
+    if use_gpu:
+        population_array = population_array.get()
 
     population_frame = pd.DataFrame(np.column_stack((population_array, flatfitness)))
     gen_start = 0
@@ -415,7 +426,7 @@ class PickeableResidual():
 
         """ 
         simp = fittingp_to_simp(fit_params, initial_guess=self.minitial_guess, multiples=self.multiples )
-  
+
         dwx, dwz, intensity0, bkg, height, botcd, beta = simp[:,0], simp[:,1], simp[:,2], simp[:,3], simp[:,4], simp[:,5], xp.array(simp[:,6:])#modified for gpu so that each variable is a list of arrays
         
         langle = xp.deg2rad(xp.asarray(beta))
@@ -432,6 +443,8 @@ class PickeableResidual():
             return res
         
         elif self.mfit_mode == 'mcmc':
+            res = xp.where(xp.isinf(res), 10e7, res)
+            print("res", res)
             return fix_fitness_mcmc(res)
 
         else:
@@ -641,11 +654,8 @@ def stacked_trapezoids(qys, qzs, y1, y2, height, langle, rangle=None, weight=Non
     y2 = xp.tile(y2, langle.shape[1]).reshape(langle.shape[1], -1).T
 
     y1 = y1 + height / xp.tan(langle)
-    y2 = y2 + height / xp.tan(np.pi - rangle)
+    y2 = y2 + xp.absolute(height / xp.tan(np.pi - rangle))
 
-    #cumsum is used to calculate the cumulative sum of the y1 and y2 arrays
-    y1 = xp.cumsum(y1, axis=1)
-    y2 = xp.cumsum(y2, axis=1)
 
     form_factor = xp.sum(trapezoid_form_factor(qys, qzs, y1, y2, langle, rangle, height) * coeff, axis=1)
 
