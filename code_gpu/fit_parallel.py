@@ -443,8 +443,7 @@ class PickeableResidual():
             return res
         
         elif self.mfit_mode == 'mcmc':
-            res = xp.where(xp.isinf(res), 10e7, res)
-            print("res", res)
+            # res = xp.where(xp.isinf(res), 10e7, res)
             return fix_fitness_mcmc(res)
 
         else:
@@ -631,15 +630,17 @@ def stacked_trapezoids(qys, qzs, y1, y2, height, langle, rangle=None, weight=Non
     else:
         rangle = langle
 
-    form_factor = xp.zeros(qzs.shape, dtype=complex)
 
     #making an array of shift values which correspond to the number of trapezoids. newaxis to avoid broadcasting error
-    shift = xp.asarray(height)[:, xp.newaxis] * xp.arange(langle.shape[1])
+    height = xp.asarray(height)
+    shift = height[:, xp.newaxis] * xp.arange(langle.shape[1])
 
     #modify flattened qzs to match the shift so we can multiply them together without broadcasting error
-    qzs = xp.tile(qzs, langle.shape[1]).reshape(langle.shape[1], -1)
-    qys = xp.tile(qys, langle.shape[1]).reshape(langle.shape[1], -1)
+    qzs = xp.tile(qzs, langle.shape).reshape((langle.shape[0],langle.shape[1], -1))
+    qys = xp.tile(qys, langle.shape).reshape((langle.shape[0],langle.shape[1], -1))
 
+    form_factor = xp.zeros(qzs.shape, dtype=complex)
+    
     #coeff should be a 3d array with shape (number of population, number of trapezoids, number of qz)
     coeff = xp.exp(-1j * shift[:,:, xp.newaxis] * qzs)
     
@@ -653,14 +654,29 @@ def stacked_trapezoids(qys, qzs, y1, y2, height, langle, rangle=None, weight=Non
     y1 = xp.tile(y1, langle.shape[1]).reshape(langle.shape[1], -1).T
     y2 = xp.tile(y2, langle.shape[1]).reshape(langle.shape[1], -1).T
 
-    y1 = y1 + height / xp.tan(langle)
-    y2 = y2 + xp.absolute(height / xp.tan(np.pi - rangle))
+    #calculate y1 and y2 for each trapezoid increasingly using cumsum
+    #for values of height involving nan insert creates a problem
+    # y1 = y1+np.insert(xp.cumsum(height / xp.tan(langle), axis=1)[0][:-1], 0,  0)
+    # y2 = y2+np.insert(xp.cumsum(np.abs(height / xp.tan(np.pi - rangle)), axis=1)[0][:-1], 0, 0)
 
+    y1_cumsum = xp.cumsum(height / xp.tan(langle), axis=1)
+    y2_cumsum = xp.cumsum(np.abs(height / np.tan(np.pi - rangle)), axis=1)
 
-    form_factor = xp.sum(trapezoid_form_factor(qys, qzs, y1, y2, langle, rangle, height) * coeff, axis=1)
+    y1[:,1:] = y1[:,1:]  +  y1_cumsum[:,:-1]
+    y2[:,1:] = y2[:,1:]  + y2_cumsum[:,:-1]
+
+    
+    form_factor = xp.sum(trapezoid_form_factor(qys = qys, 
+                                                   qzs = qzs, 
+                                                   y1 = y1, 
+                                                   y2 = y2, 
+                                                   langle=langle, 
+                                                   rangle = rangle, 
+                                                   height = height)* coeff, axis=1)
 
     form_factor_intensity = xp.absolute(form_factor) ** 2
 
+    
     return form_factor_intensity
 
 

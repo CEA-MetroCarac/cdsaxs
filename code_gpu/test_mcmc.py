@@ -40,7 +40,7 @@ def generate_arbitrary_data(qxs, qzs):
         qzs = qzs.get()
 
 
-    data = stacked_trapezoids(qxs, qzs, y1=0, y2=bot_cd, height=height, langle=langle)
+    data = stacked_trapezoids(qxs, qzs, y1=[0,0], y2=bot_cd, height=height, langle=langle)
 
 
     data = corrections_dwi0bk(data, dwx, dwz, i0, bkg, qxs, qzs)
@@ -74,8 +74,8 @@ def test_mcmc_with_arbitrary_data():
                             multiples=multiples,
                             N=len(arbitrary_params),
                             sigma=sigma,
-                            nsteps=700,
-                            nwalkers=25,  # needs to be higher than 2 x N
+                            nsteps=500,
+                            nwalkers=100,  # needs to be higher than 2 x N
                             gaussian_move=False,
                             parallel=False,
                             seed=None,

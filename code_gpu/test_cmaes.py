@@ -34,12 +34,12 @@ def generate_arbitrary_data(qxs, qzs):
     langle = np.deg2rad(np.asarray(swa))
     rangle = np.deg2rad(np.asarray(swa))
 
-    if use_gpu:
+    if ~use_gpu:
         qxs = qxs.get()
         qzs = qzs.get()
 
 
-    data = stacked_trapezoids(qxs, qzs, y1=0, y2=bot_cd, height=height, langle=langle)
+    data = stacked_trapezoids(qxs, qzs, y1=[0,0], y2=bot_cd, height=height, langle=langle)
 
 
     data = corrections_dwi0bk(data, dwx, dwz, i0, bkg, qxs, qzs)
@@ -59,7 +59,7 @@ def test_cmaes_with_arbitrary_data():
     # Call the cmaes function with arbitrary data
     if __name__ == "__main__":
         
-        best_corr, best_fitness = cmaes(data=data[0], qxs=qxs, qzs=qzs, sigma=100, ngen=1000, popsize=400, mu=10,
+        best_corr, best_fitness = cmaes(data=data[0], qxs=qxs, qzs=qzs, sigma=100, ngen=1000, popsize=500, mu=10,
                                             n_default=len(arbitrary_params), multiples=multiples, restarts=0, verbose=False, tolhistfun=5e-5,
                                             initial_guess=arbitrary_params, ftarget=None, dir_save=None, use_gpu=use_gpu)
     
