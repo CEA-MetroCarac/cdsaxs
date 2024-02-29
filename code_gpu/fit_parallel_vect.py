@@ -11,6 +11,7 @@ Code developed by Jerome Reche and Vincent Gagneur.
 import os
 from collections import deque
 import numpy as np
+import cupy as cp
 import pandas as pd
 from random import randrange
 import deap.base as dbase
@@ -20,11 +21,18 @@ import scipy.interpolate
 import emcee
 import sys
 import multiprocessing as mp
-import fit as original_fit
+
+
+creator.create('FitnessMin', dbase.Fitness, weights=(-1.,))  # to minim. fitness
+creator.create('Individual', list, fitness=creator.FitnessMin)
+
+#declare a global variable xp that will be changed to cp or np depending on the use_gpu in the cmaes function
+xp = np
+
 
 def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
           popsize, mu, n_default, restarts, tolhistfun, ftarget,
-          restart_from_best=True, verbose=True, dir_save=None):
+          restart_from_best=True, verbose=True, dir_save=None, use_gpu=False):
     """
     Modified from deap/algorithms.py to return population_list instead of
     final population and use additional termination criteria (algorithm
@@ -73,6 +81,12 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
     best_fitness: ??
         error obtain on fit TODO: to confirm
     """
+    # declare a global variable xp that will be changed to cp or np depending on the use_gpu in the cmaes function
+    global xp
+    xp = np
+
+    if use_gpu & cp.cuda.is_available():
+        xp = cp
 
     if dir_save is not None:
         if not os.path.exists(dir_save):
@@ -86,29 +100,25 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
     
     toolbox.register('evaluate', residual)
     
-    #register parallel map function to toolbox
-    parallel = mp.cpu_count()
-    pool = mp.Pool(parallel)
-    toolbox.register('map', pool.map)
 
     halloffame = tools.HallOfFame(1)
 
     thestats = tools.Statistics(lambda ind: ind.fitness.values)
-    thestats.register('avg', lambda x: np.mean(np.asarray(x)[np.isfinite(x)]) \
-        if np.asarray(x)[np.isfinite(x)].size != 0 else None)
-    thestats.register('std', lambda x: np.std(np.asarray(x)[np.isfinite(x)]) \
-        if np.asarray(x)[np.isfinite(x)].size != 0 else None)
-    thestats.register('min', lambda x: np.min(np.asarray(x)[np.isfinite(x)]) \
-        if np.asarray(x)[np.isfinite(x)].size != 0 else None)
-    thestats.register('max', lambda x: np.max(np.asarray(x)[np.isfinite(x)]) \
-        if np.asarray(x)[np.isfinite(x)].size != 0 else None)
-    thestats.register('fin', lambda x: np.sum(np.isfinite(x)) / np.size(x))
+    thestats.register('avg', lambda x: xp.mean(xp.asarray(x)[xp.isfinite(xp.asarray(x))]) \
+        if xp.asarray(x)[xp.isfinite(xp.asarray(x))].size != 0 else None)
+    thestats.register('std', lambda x: xp.std(xp.asarray(x)[xp.isfinite(xp.asarray(x))]) \
+        if xp.asarray(x)[xp.isfinite(xp.asarray(x))].size != 0 else None)
+    thestats.register('min', lambda x: xp.min(xp.asarray(x)[xp.isfinite(xp.asarray(x))]) \
+        if xp.asarray(x)[xp.isfinite(xp.asarray(x))].size != 0 else None)
+    thestats.register('max', lambda x: xp.max(xp.asarray(x)[xp.isfinite(xp.asarray(x))]) \
+        if xp.asarray(x)[xp.isfinite(xp.asarray(x))].size != 0 else None)
+    thestats.register('fin', lambda x: xp.sum(xp.isfinite(xp.asarray(x))) / xp.size(xp.asarray(x)))
 
     # thestats.register('cumtime', lambda x: time.perf_counter() - last_time)
     logbook = tools.Logbook()
     logbook.header = ['gen', 'nevals'] + (thestats.fields if thestats else [])
     population_list = []
-    popsize_default = int(4 + 3 * np.log(n_default))
+    popsize_default = int(4 + 3 * xp.log(n_default))
     kwargs = {'lambda_': popsize if popsize is not None else popsize_default}
     if mu is not None:
         kwargs['mu'] = mu
@@ -145,7 +155,7 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
         lambda_ = kwargs['lambda_']
         toolbox.register('generate', strategy.generate, creator.Individual)
         toolbox.register('update', strategy.update)
-        maxlen = 10 + int(np.ceil(30 * n_default / lambda_))
+        maxlen = 10 + int(xp.ceil(30 * n_default / lambda_))
         last_best_fitnesses = deque(maxlen=maxlen)
         cur_gen = 0
         # fewer generations when popsize is doubled
@@ -161,8 +171,11 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
             population_list.append(population)
 
             # Evaluate the individuals
-            fitnesses = toolbox.map(toolbox.evaluate, population)
-            
+            fitnesses = toolbox.evaluate(population)
+
+            if use_gpu & isinstance(fitnesses, xp.ndarray):
+                fitnesses = fitnesses.get()
+
             for ind, fit in zip(population, fitnesses):
                 ind.fitness.values = (fit,)  # tuple of length 1
             halloffame.update(population)
@@ -188,14 +201,16 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
             if last_best_fitnesses[-1] is None:
                 last_best_fitnesses.pop()
                 pass
-            # print(last_best_fitnesses)
             delta = max(last_best_fitnesses) - min(last_best_fitnesses)
+
             cond1 = tolhistfun is not None
             cond2 = len(last_best_fitnesses) == last_best_fitnesses.maxlen
             cond3 = delta < tolhistfun
+
             if cond1 and cond2 and cond3:
                 print(msg.format("tolhistfun", cur_gen))
                 break
+
         else:
             print(msg.format("ngen", cur_gen))
 
@@ -206,15 +221,20 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
         print(('best', best_corr, best_fitness))
     # make population dataframe, order of rows is first generation for all
     # children, then second generation for all children...
-    population_arr = np.array(
+    population_arr = xp.array(
         [list(individual) for generation in population_list for individual in
          generation])
 
     population_arr = fittingp_to_simp1(population_arr, initial_guess=initial_guess, multiples=multiples)
 
-    fitness_arr = np.array(
+    fitness_arr = xp.array(
         [individual.fitness.values[0] for generation in population_list for
          individual in generation])
+    
+    # convert to numpy arrays if using GPU
+    if use_gpu:
+        population_arr = population_arr.get()
+        fitness_arr = fitness_arr.get()
 
     population_fr = pd.DataFrame(np.column_stack((population_arr, fitness_arr)))
     if dir_save is not None:
@@ -222,7 +242,8 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
 
     return best_corr, best_fitness
 
-def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, gaussian_move=False, parallel=True, seed=None, verbose=True, test=False):
+
+def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, gaussian_move=False, parallel=True, seed=None, verbose=True, test=False, use_gpu=False):
     """
     Fit data using the emcee package's implementation of the MCMC algorithm.
 
@@ -249,27 +270,30 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
         minfitness_each_gen (numpy.ndarray): Minimum fitness at each generation.
         Sampler (emcee.EnsembleSampler): Instance of emcee.Sampler with detailed output of the algorithm.
     """
+    global xp
+    xp = np
+
+    if use_gpu & cp.cuda.is_available():
+        xp = cp
     
     # Create a PickeableResidual instance for data fitting
     residual = PickeableResidual(data=data, qxs=qxs, qzs=qzs, initial_guess=initial_guess, multiples=multiples, fit_mode='mcmc')
-    process = mp.cpu_count()
-    print('process', process)
 
     def do_verbose(Sampler):
         if hasattr(Sampler, 'acceptance_fraction'):
-            print('Acceptance fraction: ' + str(np.mean(Sampler.acceptance_fraction)))
+            print('Acceptance fraction: ' + str(xp.mean(Sampler.acceptance_fraction)))
         else:
-            print('Acceptance fraction: ' + str(np.mean([Sampler.acceptance_fraction for Sampler in Sampler])))
+            print('Acceptance fraction: ' + str(xp.mean([Sampler.acceptance_fraction for Sampler in Sampler])))
         sys.stdout.flush()
     
     # Empirical factor to modify MCMC acceptance rate
-    c = 1e-5
+    c = 1e-7
     
     # Generate a random seed if none is provided
     if seed is None:
         seed = randrange(2 ** 32)
     seed = seed
-    np.random.seed(seed)
+    xp.random.seed(seed)
     
     if hasattr(sigma, '__len__'):
         sigma = sigma
@@ -278,34 +302,35 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
         
         print('{} parameters'.format(N))
     
-    with mp.Pool(processes=process) as pool:
-        if gaussian_move:
-            # Use Gaussian move for the proposal distribution
-            individuals = np.asarray([np.random.uniform(0, 10e-3, N) for _ in range(nwalkers)])
-            np.asarray(individuals)
-            Sampler = emcee.EnsembleSampler(nwalkers, N, residual, moves=emcee.moves.GaussianMove(sigma), pool=pool)
 
-            Sampler.run_mcmc(individuals, nsteps, progress=True)
+    if gaussian_move:
+        # Use Gaussian move for the proposal distribution
+        individuals = [xp.random.uniform(0, 10e-3, N) for _ in range(nwalkers)]
+        Sampler = emcee.EnsembleSampler(nwalkers, N, residual, moves=emcee.moves.GaussianMove(sigma), pool=None, vectorize=False)
 
-            if verbose:
-                do_verbose(Sampler)
-        else:
-            # Use the default stretch move
-           individuals = [np.random.default_rng().normal(loc=0, scale=sigma, size=sigma.shape) for _ in range(nwalkers)]
-           Sampler = emcee.EnsembleSampler(nwalkers, N, residual, pool=None)
-           
-           Sampler.run_mcmc(individuals, nsteps, progress=True)
-           
-           if verbose:
-               do_verbose(Sampler)
+        Sampler.run_mcmc(individuals, nsteps, progress=True)
+
+        if verbose:
+            do_verbose(Sampler)
+    else:
+        # Use the default stretch move
+        # if use_gpu==False & isinstance(sigma, cp.ndarray):
+        #     sigma = sigma.get()
+
+        individuals = [xp.random.default_rng().normal(loc=0, scale=sigma, size=sigma.shape) for _ in range(nwalkers)]
+        Sampler = emcee.EnsembleSampler(nwalkers, N, residual, pool=None, vectorize=True)
+              
+        Sampler.run_mcmc(individuals, nsteps, progress=True)
+
+        if verbose:
+            do_verbose(Sampler)
     
-    pool.join()
     
     # Data processing and analysis
     s = Sampler.chain.shape
-    flatchain = np.transpose(Sampler.chain, axes=[1, 0, 2]).reshape(s[0] * s[1], s[2])
+    flatchain = xp.transpose(Sampler.chain, axes=[1, 0, 2]).reshape(s[0] * s[1], s[2])
     flatlnprobability = Sampler.lnprobability.transpose().flatten()
-    minfitness_each_gen = np.min(-Sampler.lnprobability * c, axis=0)
+    minfitness_each_gen = xp.min(-Sampler.lnprobability * c, axis=0)
     
     flatfitness = -flatlnprobability * c
     best_index = np.argmin(flatfitness)
@@ -315,6 +340,9 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
     
     
     population_array = fittingp_to_simp1(flatchain, initial_guess=initial_guess, multiples=multiples)
+
+    if use_gpu:
+        population_array = population_array.get()
 
     population_frame = pd.DataFrame(np.column_stack((population_array, flatfitness)))
     gen_start = 0
@@ -352,7 +380,7 @@ def fix_fitness_mcmc(fitness):
     where fitness can be log, abs, squared error, etc.
     emcee expects the fitness function to return ln(P(new)), P(old) is auto-calculated
     """
-    c = 1e-5  # empirical factor to modify mcmc acceptance rate, makes printed fitness different than actual, higher c increases acceptance rate
+    c = 1e-7  # empirical factor to modify mcmc acceptance rate, makes printed fitness different than actual, higher c increases acceptance rate
     return -fitness / c
     # return -0.5 * fitness ** 2 / c ** 2
 
@@ -395,36 +423,28 @@ class PickeableResidual():
         Returns
         -------
 
-        """
-  #         print('test', fit_params, self.minitial_guess, self.multiples)
-        simp = fittingp_to_simp(fit_params, initial_guess=self.minitial_guess, multiples=self.multiples)
+        """ 
+        print("fit_params", fit_params)
+        simp = fittingp_to_simp(fit_params, initial_guess=self.minitial_guess, multiples=self.multiples )
 
-        if simp is None:
-            if self.mfit_mode == "cmaes":
-                return np.inf
-            else:
-                # print("inf")
-                return 10e7
+        dwx, dwz, intensity0, bkg, height, botcd, beta = simp[:,0], simp[:,1], simp[:,2], simp[:,3], simp[:,4], simp[:,5], xp.array(simp[:,6:])#modified for gpu so that each variable is a list of arrays
         
-        dwx, dwz, intensity0, bkg, height, botcd, beta = simp[0], simp[1], simp[2], simp[3], simp[4], simp[5], np.array(simp[6:])
+        langle = xp.deg2rad(xp.asarray(beta))
+        rangle = xp.deg2rad(xp.asarray(beta))
 
-        langle = np.deg2rad(np.asarray(beta))
-        rangle = np.deg2rad(np.asarray(beta))
-        qxfit = []
-        for i in range(len(self.mqz)):
-            ff_core = original_fit.stacked_trapezoids(self.mqx[i], self.mqz[i], 0, botcd, height, langle, rangle)
-            qxfit.append(ff_core)
-        qxfit = original_fit.corrections_dwi0bk(qxfit, dwx, dwz, intensity0, bkg, self.mqx, self.mqz)
+        qxfit = stacked_trapezoids(self.mqx, self.mqz, xp.zeros(botcd.shape), botcd, height, langle, rangle)
 
-        res = 0
-        for i in range(0, len(self.mdata), 1):
-            res += original_fit.log_error(self.mdata[i], qxfit[i])
+        qxfit = corrections_dwi0bk(qxfit, dwx, dwz, intensity0, bkg, self.mqx, self.mqz)
+
+
+        res = log_error(self.mdata, qxfit)
 
         if self.mfit_mode == 'cmaes':
             return res
         
         elif self.mfit_mode == 'mcmc':
-            # print('res', res/120)
+            # res = xp.where(xp.isinf(res), 10e7, res)
+            # print("res_gpu", res)
             return fix_fitness_mcmc(res)
 
         else:
@@ -457,13 +477,17 @@ def fittingp_to_simp(fit_params, initial_guess, multiples):
         List of all the parameters converted
     """
     nbc = len(initial_guess) - 6
+    # multiples = multiples * nbc
 
-    simp = np.asarray(multiples) * np.asarray(fit_params) + initial_guess
-    if np.any(simp[:6] < 0):
-        return None
-    if np.any(simp[6:] < 0) or np.any(simp[6:] > 90):
-        return None
-    
+    simp = xp.asarray(multiples) * xp.asarray(fit_params) + xp.asarray(initial_guess)
+
+    if(len(simp.shape) == 2):
+        simp[:,:6] = xp.where(simp[:,:6] < 0, xp.nan, simp[:,:6])
+        simp[:,6:] = xp.where((simp[:,6:] <= 0) | (simp[:,6:] >= 91), xp.nan, simp[:,6:])
+    else:
+        simp[:6] = xp.where(simp[:6] < 0, xp.nan, simp[:6])
+        simp[6:] = xp.where((simp[6:] <= 0) | (simp[6:] >= 91), xp.nan, simp[6:])#added 1 to 90 to avoid rounding errors
+        
     return simp
 
 def fittingp_to_simp1(fit_params, initial_guess, multiples):
@@ -488,96 +512,10 @@ def fittingp_to_simp1(fit_params, initial_guess, multiples):
         List of all the parameters converted
     """
     nbc = len(initial_guess) - 6
-    simp = np.asarray(multiples) * np.asarray(fit_params) + initial_guess
-    simp[np.where(simp < 0)[0], :] = None
+    simp = xp.asarray(multiples) * xp.asarray(fit_params) + xp.asarray(initial_guess)
+    simp[xp.where(simp < 0)[0], :] = None
 
     return simp
-
-def stacked_trapezoids(qys, qzs, y1, y2, height, langle,
-                       rangle=None, weight=None):
-    """
-    Simulation of the form factor of trapezoids at qx, qz position.
-    Function extracted from XiCam (modified)
-
-    Parameters
-    ----------
-    qys, qzs: list of floats
-        List of qx/qz at which the form factor is simulated
-    y1, y2: floats
-        Values of the bottom right/left (y1/y2) position respectively of
-        the trapezoid such as y2 - y1 = width of the bottom of the trapezoid
-    height: float
-        Height of the trapezoid
-    langle, rangle: list of floats
-        Each angle correspond to a trapezoid
-    weight: list of floats
-        To manage different material in the stack.
-
-    Returns
-    -------
-    form_factor_intensity: list of floats
-        Intensity of the form factor
-    """
-    if not isinstance(langle, np.ndarray):
-        raise TypeError('angles should be array')
-
-    if rangle is not None:
-        if not langle.size == rangle.size:
-            raise ValueError('both angle array are not of same size')
-    else:
-        rangle = langle
-
-    form_factor = np.zeros(qzs.shape, dtype=complex)
-    # loop over all the angles
-    for i in range(langle.size):
-        shift = height * i
-        left, right = langle[i], rangle[i]
-        coeff = np.exp(-1j * shift * qzs)
-        if weight is not None:
-            coeff *= weight[i] * (1. + 1j)
-        form_factor += trapezoid_form_factor(qys, qzs, y1, y2,
-                                             left, right, height) * coeff
-        y1 += height / np.tan(left)
-        y2 += height / np.tan(np.pi - right)
-
-    form_factor_intensity = np.absolute(form_factor) ** 2
-
-    return form_factor_intensity
-
-def trapezoid_form_factor(qys, qzs, y1, y2, langle, rangle, height):
-    """
-    Simulation of the form factor of a trapezoid at all qx, qz position.
-    Function extracted from XiCam
-
-    Parameters
-    ----------
-    qys, qzs: list of floats
-        List of qx/qz at which the form factor is simulated
-    y1, y2: floats
-        Values of the bottom right/left (y1/y2) position respectively of
-        the trapezoids such as y2 - y1 = width of the bottom of the trapezoids
-    langle, rangle: floats
-        Left and right bottom angle of trapezoid
-    height: float
-        Height of the trapezoid
-
-    Returns
-    -------
-    form_factor: list of float
-        List of the values of the form factor
-    """
-    tan1 = np.tan(langle)
-    tan2 = np.tan(np.pi - rangle)
-    val1 = qys + tan1 * qzs
-    val2 = qys + tan2 * qzs
-    with np.errstate(divide='ignore'):
-        form_factor = (tan1 * np.exp(-1j * qys * y1) *
-                       (1 - np.exp(-1j * height / tan1 * val1)) / val1)
-        form_factor -= (tan2 * np.exp(-1j * qys * y2) *
-                        (1 - np.exp(-1j * height / tan2 * val2)) / val2)
-        form_factor /= qys
-
-    return form_factor
 
 
 def corrections_dwi0bk(intensities, dw_factorx, dw_factorz,
@@ -612,11 +550,185 @@ def corrections_dwi0bk(intensities, dw_factorx, dw_factorz,
     """
     # TODO: use qxqzi data format as in other function
 
-    intensities_corr = []
-    for intensity, qxi, qzi in zip(intensities, qxs, qzs):
-        dw_array = np.exp(-((np.asarray(qxi) * dw_factorx) ** 2 +
-                            (np.asarray(qzi) * dw_factorz) ** 2))
-        intensities_corr.append(np.asarray(intensity) * dw_array * scaling
-                                + bkg_cste)
-    return intensities_corr
+    # for intensity, qxi, qzi in zip(intensities, qxs, qzs):
 
+    qxs = xp.tile(qxs, xp.asarray(dw_factorx).shape[0]).reshape(xp.asarray(dw_factorx).shape[0], -1).T
+    qzs = xp.tile(qzs, xp.asarray(dw_factorz).shape[0]).reshape(xp.asarray(dw_factorz).shape[0], -1).T
+
+    dw_array = xp.exp(-(qxs * dw_factorx) ** 2 +
+                        (qzs * dw_factorz) ** 2)
+    intensities_corr = (xp.asarray(intensities.T) * dw_array * scaling
+                            + bkg_cste)
+    return intensities_corr.T
+
+
+def trapezoid_form_factor(qys, qzs, y1, y2, langle, rangle, height):
+    """
+    Simulation of the form factor of a trapezoid at all qx, qz position.
+    Function extracted from XiCam
+
+    Parameters
+    ----------
+    qys, qzs: list of floats
+        List of qx/qz at which the form factor is simulated
+    y1, y2: floats
+        Values of the bottom right/left (y1/y2) position respectively of
+        the trapezoids such as y2 - y1 = width of the bottom of the trapezoids
+    langle, rangle: floats
+        Left and right bottom angle of trapezoid
+    height: float
+        Height of the trapezoid
+
+    Returns
+    -------
+    form_factor: list of float
+        List of the values of the form factor
+    """
+    tan1 = xp.tan(langle)[:,:, xp.newaxis]
+    tan2 = xp.tan(np.pi - rangle)[:,:, xp.newaxis]
+    val1 = qys + tan1 * qzs
+    val2 = qys + tan2 * qzs
+    with np.errstate(divide='ignore'):
+        form_factor = (tan1 * xp.exp(-1j * qys * y1[:,:, xp.newaxis]) *
+                       (1 - xp.exp(-1j * height[:,:, xp.newaxis] / tan1 * val1)) / val1)
+        form_factor -= (tan2 * xp.exp(-1j * qys * y2[:,:, xp.newaxis]) *
+                        (1 - xp.exp(-1j * height[:,:, xp.newaxis] / tan2 * val2)) / val2)
+        form_factor /= qys
+
+    return form_factor
+
+
+def stacked_trapezoids(qys, qzs, y1, y2, height, langle, rangle=None, weight=None):
+    """
+    Simulation of the form factor of trapezoids at qx, qz position.
+    Function extracted from XiCam (modified)
+
+    Parameters
+    ----------
+    qys, qzs: list of floats
+        List of qx/qz at which the form factor is simulated
+    y1, y2: floats
+        Values of the bottom right/left (y1/y2) position respectively of
+        the trapezoid such as y2 - y1 = width of the bottom of the trapezoid
+    height: list of floats or numpy.ndarray
+        Height of the trapezoid
+    langle, rangle: 2d array of floats
+        Each angle correspond to a trapezoid
+    weight: list of floats
+        To manage different material in the stack.
+
+    Returns
+    -------
+    form_factor_intensity: list of floats
+        Intensity of the form factor
+    """
+    if not isinstance(langle, xp.ndarray):
+        raise TypeError('angles should be array')
+
+    if rangle is not None:
+        if not langle.shape == rangle.shape:
+            raise ValueError('both angle arrays are not of the same shape')
+    else:
+        rangle = langle
+
+
+    #making an array of shift values which correspond to the number of trapezoids. newaxis to avoid broadcasting error
+    height = xp.asarray(height)
+    shift = height[:, xp.newaxis] * xp.arange(langle.shape[1])
+
+    #modify flattened qzs to match the shift so we can multiply them together without broadcasting error
+    qzs = xp.tile(qzs, langle.shape).reshape((langle.shape[0],langle.shape[1], -1))
+    qys = xp.tile(qys, langle.shape).reshape((langle.shape[0],langle.shape[1], -1))
+
+    form_factor = xp.zeros(qzs.shape, dtype=complex)
+    
+    #coeff should be a 3d array with shape (number of population, number of trapezoids, number of qz)
+    coeff = xp.exp(-1j * shift[:,:, xp.newaxis] * qzs)
+    
+    if weight is not None:
+        coeff *= weight[:, xp.newaxis] * (1. + 1j)
+
+    #we calculate y1 and y2 for each trapezoid and then send it to trapezoid_form_factor at once
+    height = xp.tile(height, langle.shape[1]).reshape(langle.shape[1], -1).T
+    
+    #tile y1 and y2 to match the shape of langle and rangle
+    y1 = xp.tile(y1, langle.shape[1]).reshape(langle.shape[1], -1).T
+    y2 = xp.tile(y2, langle.shape[1]).reshape(langle.shape[1], -1).T
+
+    #calculate y1 and y2 for each trapezoid increasingly using cumsum
+    #for values of height involving nan insert creates a problem
+    # y1 = y1+np.insert(xp.cumsum(height / xp.tan(langle), axis=1)[0][:-1], 0,  0)
+    # y2 = y2+np.insert(xp.cumsum(np.abs(height / xp.tan(np.pi - rangle)), axis=1)[0][:-1], 0, 0)
+
+    y1_cumsum = xp.cumsum(height / xp.tan(langle), axis=1)
+    y2_cumsum = xp.cumsum(np.abs(height / np.tan(np.pi - rangle)), axis=1)
+
+    y1[:,1:] = y1[:,1:]  +  y1_cumsum[:,:-1]
+    y2[:,1:] = y2[:,1:]  + y2_cumsum[:,:-1]
+
+    
+    form_factor = xp.sum(trapezoid_form_factor(qys = qys, 
+                                                   qzs = qzs, 
+                                                   y1 = y1, 
+                                                   y2 = y2, 
+                                                   langle=langle, 
+                                                   rangle = rangle, 
+                                                   height = height)* coeff, axis=1)
+
+    form_factor_intensity = xp.absolute(form_factor) ** 2
+
+    
+    return form_factor_intensity
+
+
+def log_error(exp_i_array, sim_i_array):
+    """
+    Return the difference between two set of values (experimental and
+    simulated data), using the log error
+
+    Parameters
+    ----------
+    exp_i_array: numpy.ndarray((n))
+        Experimental intensities data
+    sim_i_array: numpy.ndarray((n))
+        Simulated intensities data
+
+    Returns
+    -------
+    error: float
+        Sum of difference of log data, normalized by the number of data
+    """
+    exp_i_array = xp.where(exp_i_array > 0, exp_i_array, xp.nan)
+    
+    exp_i_array = xp.tile(exp_i_array, sim_i_array.shape[0]).reshape(sim_i_array.shape[0], -1)
+
+    error = xp.nansum(xp.abs((xp.log10(exp_i_array) - xp.log10(sim_i_array))), axis=1)
+
+    # error /= xp.count_nonzero(~xp.isnan(exp_i_array), axis=1)
+
+    error = xp.where(xp.all(xp.isnan(sim_i_array), axis=1), xp.inf, error)
+
+    return error
+
+
+def std_error(exp_i_array, sim_i_array):
+    """
+    Return the difference between two set of values (experimental and
+    simulated data), using the std error
+
+    Parameters
+    ----------
+    exp_i_array: numpy.ndarray((n))
+        Experimental intensities data
+    sim_i_array: numpy.ndarray((n))
+        Simulated intensities data
+
+    Returns
+    -------
+    error: float
+        Error between the two set of data (normalized by number of data)
+    """
+    error = xp.nansum(xp.abs((exp_i_array - sim_i_array)))
+    error /= xp.count_nonzero(~xp.isnan(exp_i_array))
+
+    return error

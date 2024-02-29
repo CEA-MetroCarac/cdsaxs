@@ -1,6 +1,6 @@
 import numpy as np
-from fit import stacked_trapezoids, corrections_dwi0bk
-from fit_parallel import mcmc
+# from fit import stacked_trapezoids, corrections_dwi0bk
+from fit_parallel import mcmc, stacked_trapezoids, corrections_dwi0bk
 import os
 
 pitch = 100 #nm distance between two trapezoidal bars
@@ -32,7 +32,7 @@ def generate_arbitrary_data():
 def test_mcmc_with_arbitrary_data():
     # Generate arbitrary data and parameters
     data, arbitrary_params = generate_arbitrary_data()
-    sigma = 1E-7 * np.asarray(arbitrary_params)
+    sigma = 100 * np.asarray(arbitrary_params)
 
     # Call the mcmc function with arbitrary data
     if (__name__ == "__main__"):
@@ -45,11 +45,11 @@ def test_mcmc_with_arbitrary_data():
                             multiples=np.asarray(multiples),
                             N=len(arbitrary_params),
                             sigma=sigma,
-                            nsteps=700,
-                            nwalkers=25,  # needs to be higher than 2 x N
+                            nsteps=600,
+                            nwalkers=100,  # needs to be higher than 2 x N
                             gaussian_move=False,
-                            parallel=False,
-                            seed=None,
+                            parallel=True,
+                            seed=500,
                             verbose=True,
                             test=True)
  

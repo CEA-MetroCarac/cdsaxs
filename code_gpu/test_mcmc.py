@@ -1,10 +1,10 @@
 import numpy as np
-from fit_parallel import mcmc, stacked_trapezoids, corrections_dwi0bk
+from cdsaxs.code_gpu.fit_parallel_vect import mcmc, stacked_trapezoids, corrections_dwi0bk
 import os
 import cupy as cp
 import matplotlib.pyplot as plt
 
-use_gpu = True
+use_gpu = False
 
 pitch = 100 #nm distance between two trapezoidal bars
 qzs = np.linspace(-0.8, 0.8, 120)
@@ -56,16 +56,15 @@ def test_mcmc_with_arbitrary_data():
     if use_gpu:
         data = cp.asarray(data)
         arbitrary_params = cp.asarray(arbitrary_params)
-        sigma = 1E-7 * cp.asarray(arbitrary_params)
+        sigma = 100 * cp.asarray(arbitrary_params)
     else:
         data = np.asarray(data)
         arbitrary_params = np.asarray(arbitrary_params)
-        sigma = 1E-7 * np.asarray(arbitrary_params)
+        sigma = 100 * np.asarray(arbitrary_params)
 
     # Call the cmaes function with arbitrary data
     if __name__ == "__main__":
 
-        
         
         best_corr = mcmc(data=data[0],
                             qxs=qxs,
@@ -74,13 +73,13 @@ def test_mcmc_with_arbitrary_data():
                             multiples=multiples,
                             N=len(arbitrary_params),
                             sigma=sigma,
-                            nsteps=500,
+                            nsteps=600,
                             nwalkers=100,  # needs to be higher than 2 x N
                             gaussian_move=False,
                             parallel=False,
-                            seed=None,
+                            seed=500,
                             verbose=True,
-                            test=True,
+                            # test=True,
                             use_gpu=use_gpu)
     
     print("arbitary_params:", arbitrary_params)
