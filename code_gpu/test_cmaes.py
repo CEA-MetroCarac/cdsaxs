@@ -3,7 +3,7 @@ from fit_parallel_vect import cmaes, stacked_trapezoids, corrections_dwi0bk
 import os
 import cupy as cp
 
-use_gpu = False
+use_gpu = True
 
 pitch = 100 #nm distance between two trapezoidal bars
 qzs = np.linspace(-0.1, 0.1, 120)
@@ -34,9 +34,9 @@ def generate_arbitrary_data(qxs, qzs):
     langle = np.deg2rad(np.asarray(swa))
     rangle = np.deg2rad(np.asarray(swa))
 
-    # if ~use_gpu:
-    #     qxs = qxs.get()
-    #     qzs = qzs.get()
+    if ~use_gpu:
+        qxs = qxs.get()
+        qzs = qzs.get()
 
 
     data = stacked_trapezoids(qxs, qzs, y1=np.asarray([0,0]), y2=np.asarray(bot_cd), height=np.asarray(height), langle=np.asarray(langle))

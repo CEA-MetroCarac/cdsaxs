@@ -39,11 +39,11 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
 
     Parameters
     ----------
-    data: np.arrays of float32
+    data: np or cp arrays of float32
         Intensities to fit
-    qxs, qzs: list of floats
+    qxs, qzs: np or cp arrays of floats
         List of qx/qz linked to intensities
-    initial_guess: list of float32
+    initial_guess: np or cp arrays of float32
         Values entered by the user as starting point for the fit (list of
         Debye-Waller, I0, noise level, height, linewidth, [angles......])
     sigma: float
@@ -55,7 +55,7 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
     mu: ??
         TODO: investigate real impact
     n_default: int
-        integer ussed to define size of default parameters
+        integer used to define size of default parameters
         TODO: investigate real impact
     restarts: int
         Number of time fitting must be restart
@@ -71,6 +71,8 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
     dir_save: str, optional
         Directory pathname for population and fitness arrays saving in a
         'output.xlx' file. If None, saving is not done.
+    use_gpu: bool, optional
+        user can choose to use the GPU for the computation
 
     Returns
     -------
@@ -258,7 +260,8 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
         parallel (bool or int or str, optional): Set the parallel processing mode. Default is True.
         seed (int, optional): Seed for the random number generator.
         verbose (bool, optional): Print progress information. Default is True.
-
+        test (bool, optional): Test the function and return the mean values. Default is False.
+    
     Returns:
         None
 
@@ -303,7 +306,7 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
 
     if gaussian_move:
         # Use Gaussian move for the proposal distribution
-        individuals = [xp.random.uniform(0, 10e-3, N) for _ in range(nwalkers)]
+        individuals = [np.random.uniform(0, 10e-3, N) for _ in range(nwalkers)]
         Sampler = emcee.EnsembleSampler(nwalkers, N, residual, moves=emcee.moves.GaussianMove(sigma), pool=None, vectorize=False)
 
         Sampler.run_mcmc(individuals, nsteps, progress=True)
@@ -315,7 +318,7 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
         # if use_gpu==False & isinstance(sigma, cp.ndarray):
         #     sigma = sigma.get()
 
-        individuals = [xp.random.default_rng().normal(loc=0, scale=sigma, size=sigma.shape) for _ in range(nwalkers)]
+        individuals = [np.random.default_rng().normal(loc=0, scale=sigma.get(), size=sigma.shape) for _ in range(nwalkers)]
         Sampler = emcee.EnsembleSampler(nwalkers, N, residual, pool=None, vectorize=True)
               
         Sampler.run_mcmc(individuals, nsteps, progress=True)
@@ -358,7 +361,7 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
     # and convert the pandas dataframe to a numpy array
     if(test):
         mean = stats.loc['mean'].to_numpy()
-        return mean[:-1], Sampler.acceptance_fraction #last value is the fitness don't need it for testing
+        return mean[:-1] #last value is the fitness don't need it for testing
 
     else:  
         #save the population array
@@ -415,14 +418,17 @@ class PickeableResidual():
         """
         Parameters
         ----------
-        fit_params: list of float32
+        fit_params: numpy or cupy arrays of arrays of parametres of float32
             List of all the parameters value returned by CMAES/MCMC (list of
             Debye-Waller, I0, noise level, height, linewidth, [angles......])
 
         Returns
         -------
 
-        """ 
+        """
+        if not isinstance(fit_params, xp.ndarray):
+            fit_params = xp.array(fit_params)
+        
         if self.test:
 
             simp = fit_params
@@ -451,8 +457,7 @@ class PickeableResidual():
             return fix_fitness_mcmc(res)
 
         else:
-            print("This mode does not exist")
-            return -1
+            raise ValueError("Invalid fit mode. Please choose either 'cmaes' or 'mcmc'.")
 
         
 
@@ -467,16 +472,16 @@ def fittingp_to_simp(fit_params, initial_guess, multiples):
 
     Parameters
     ----------
-    fit_params: list of float32
+    fit_params: np or cp 1d or 2d array of float32
         List of all the parameters value returned by CMAES/MCMC (list of
         Debye-Waller, I0, noise level, height, linewidth, [angles......])
-    initial_guess: list of float32
+    initial_guess: np or cp array of float32
         Values entered by the user as starting point for the fit (list of
         Debye-Waller, I0, noise level, height, linewidth, [angles......])
 
     Returns
     -------
-    simp: list of float32
+    simp: np or cp array of float32
         List of all the parameters converted
     """
 
@@ -557,14 +562,8 @@ def corrections_dwi0bk(intensities, dw_factorx, dw_factorz,
     dw_factorx = xp.asarray(dw_factorx)
     dw_factorz = xp.asarray(dw_factorz)
 
-    # qxs = xp.tile(qxs, xp.asarray(dw_factorx).shape[0]).reshape(xp.asarray(dw_factorx).shape[0], -1).T
-    # qzs = xp.tile(qzs, xp.asarray(dw_factorz).shape[0]).reshape(xp.asarray(dw_factorz).shape[0], -1).T
-
     qxs = qxs[..., xp.newaxis]
     qzs = qzs[..., xp.newaxis]
-
-    # print("qxs shape: ", qxs.shape)
-    # print("qxs_tile shape: ", qxs_tile.shape)
 
 
     dw_array = xp.exp(-(qxs * dw_factorx) ** 2 +
@@ -581,19 +580,19 @@ def trapezoid_form_factor(qys, qzs, y1, y2, langle, rangle, height):
 
     Parameters
     ----------
-    qys, qzs: list of floats
+    qys, qzs: numpy or cupy array of floats
         List of qx/qz at which the form factor is simulated
-    y1, y2: floats
+    y1, y2: numpy or cupy array of floats
         Values of the bottom right/left (y1/y2) position respectively of
         the trapezoids such as y2 - y1 = width of the bottom of the trapezoids
-    langle, rangle: floats
+    langle, rangle: numpy or cupy 2d array of floats
         Left and right bottom angle of trapezoid
-    height: float
+    height: numpy or cupy of floats
         Height of the trapezoid
 
     Returns
     -------
-    form_factor: list of float
+    form_factor: numpy or cupy 2d array of floats
         List of the values of the form factor
     """
     tan1 = xp.tan(langle)[:,:, xp.newaxis]
@@ -617,21 +616,21 @@ def stacked_trapezoids(qys, qzs, y1, y2, height, langle, rangle=None, weight=Non
 
     Parameters
     ----------
-    qys, qzs: list of floats
+    qys, qzs: numpy or cupy array of floats
         List of qx/qz at which the form factor is simulated
-    y1, y2: floats
+    y1, y2: numpy or cupy array of floats
         Values of the bottom right/left (y1/y2) position respectively of
         the trapezoid such as y2 - y1 = width of the bottom of the trapezoid
-    height: list of floats or numpy.ndarray
+    height: numpy or cupy of floats
         Height of the trapezoid
-    langle, rangle: 2d array of floats
+    langle, rangle: numpy or cupy 2d array of floats
         Each angle correspond to a trapezoid
-    weight: list of floats
+    weight: numpy or cupy array of floats
         To manage different material in the stack.
 
     Returns
     -------
-    form_factor_intensity: list of floats
+    form_factor_intensity: numpy or cupy 2d array of floats
         Intensity of the form factor
     """
     if not isinstance(langle, xp.ndarray):
@@ -643,12 +642,28 @@ def stacked_trapezoids(qys, qzs, y1, y2, height, langle, rangle=None, weight=Non
     else:
         rangle = langle
 
+    #making sure all the inputs are arrays
+    if not isinstance(height, xp.ndarray):
+        height = xp.asarray(height)
+    if not isinstance(y1, xp.ndarray):
+        y1 = xp.asarray(y1)
+    if not isinstance(y2, xp.ndarray):
+        y2 = xp.asarray(y2)
+    if not isinstance(qys, xp.ndarray):
+        qys = xp.asarray(qys)
+    if not isinstance(qzs, xp.ndarray):
+        qzs = xp.asarray(qzs)
+    if not isinstance(langle, xp.ndarray):
+        langle = xp.asarray(langle)
+    if not isinstance(rangle, xp.ndarray):
+        rangle = xp.asarray(rangle)
 
     #making an array of shift values which correspond to the number of trapezoids. newaxis to avoid broadcasting error
     height = xp.asarray(height)
     shift = height[:, xp.newaxis] * xp.arange(langle.shape[1])
 
 
+    #broadcasting magic
     qzs = qzs[xp.newaxis, xp.newaxis, ...]
     qys = qys[xp.newaxis, xp.newaxis, ...]
 
