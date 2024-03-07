@@ -1,5 +1,5 @@
 import numpy as np
-from cdsaxs.code_gpu.fit_parallel_vect import mcmc, stacked_trapezoids, corrections_dwi0bk
+from fit_parallel_vect import mcmc, stacked_trapezoids, corrections_dwi0bk
 import os
 import cupy as cp
 import matplotlib.pyplot as plt
@@ -35,12 +35,12 @@ def generate_arbitrary_data(qxs, qzs):
     langle = np.deg2rad(np.asarray(swa))
     rangle = np.deg2rad(np.asarray(swa))
 
-    if (use_gpu):
-        qxs = qxs.get()
-        qzs = qzs.get()
+    # if (use_gpu):
+    #     qxs = qxs.get()
+    #     qzs = qzs.get()
 
 
-    data = stacked_trapezoids(qxs, qzs, y1=[0,0], y2=bot_cd, height=height, langle=langle)
+    data = stacked_trapezoids(qxs, qzs, y1=np.asarray([0,0]), y2=np.asarray(bot_cd), height=np.asarray(height), langle=np.asarray(langle))
 
 
     data = corrections_dwi0bk(data, dwx, dwz, i0, bkg, qxs, qzs)
@@ -61,12 +61,8 @@ def test_mcmc_with_arbitrary_data():
         data = np.asarray(data)
         arbitrary_params = np.asarray(arbitrary_params)
         sigma = 100 * np.asarray(arbitrary_params)
-
-    # Call the cmaes function with arbitrary data
-    if __name__ == "__main__":
-
         
-        best_corr = mcmc(data=data[0],
+        best_corr, acceptance = mcmc(data=data[0],
                             qxs=qxs,
                             qzs=qzs,
                             initial_guess=arbitrary_params,
@@ -74,14 +70,14 @@ def test_mcmc_with_arbitrary_data():
                             N=len(arbitrary_params),
                             sigma=sigma,
                             nsteps=600,
-                            nwalkers=100,  # needs to be higher than 2 x N
+                            nwalkers=200,  # needs to be higher than 2 x N
                             gaussian_move=False,
                             parallel=False,
                             seed=500,
                             verbose=True,
-                            # test=True,
+                            test=True,
                             use_gpu=use_gpu)
-    
+   
     print("arbitary_params:", arbitrary_params)
     print("best_params:", best_corr)
     tolerance = 1.0  # Adjust the tolerance as needed

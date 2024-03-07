@@ -38,7 +38,7 @@ def test_mcmc_with_arbitrary_data():
     if (__name__ == "__main__"):
         
         for i in range(1):
-            best_corr = mcmc(data=data,
+            best_corr, acceptance = mcmc(data=data,
                             qxs=qxs,
                             qzs=qzs,
                             initial_guess=np.asarray(arbitrary_params),
@@ -46,13 +46,13 @@ def test_mcmc_with_arbitrary_data():
                             N=len(arbitrary_params),
                             sigma=sigma,
                             nsteps=600,
-                            nwalkers=100,  # needs to be higher than 2 x N
+                            nwalkers=200,  # needs to be higher than 2 x N
                             gaussian_move=False,
                             parallel=True,
                             seed=500,
                             verbose=True,
                             test=True)
- 
+
     print("arbitary_params:", arbitrary_params)
     print("best_params:", best_corr)
     tolerance = 1.0  # Adjust the tolerance as needed

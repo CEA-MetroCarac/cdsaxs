@@ -1,4 +1,4 @@
-from fit_parallel import cmaes as cmaes_parallel
+from cdsaxs.code_gpu.fit_parallel_vect import cmaes as cmaes_parallel
 import numpy as np
 import os
 import time

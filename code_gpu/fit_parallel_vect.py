@@ -17,10 +17,8 @@ from random import randrange
 import deap.base as dbase
 from deap import creator, tools, cma
 from scipy import stats
-import scipy.interpolate
 import emcee
 import sys
-import multiprocessing as mp
 
 
 creator.create('FitnessMin', dbase.Fitness, weights=(-1.,))  # to minim. fitness
@@ -287,7 +285,7 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
         sys.stdout.flush()
     
     # Empirical factor to modify MCMC acceptance rate
-    c = 1e-7
+    c = 1e-5
     
     # Generate a random seed if none is provided
     if seed is None:
@@ -328,6 +326,7 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
     
     # Data processing and analysis
     s = Sampler.chain.shape
+
     flatchain = xp.transpose(Sampler.chain, axes=[1, 0, 2]).reshape(s[0] * s[1], s[2])
     flatlnprobability = Sampler.lnprobability.transpose().flatten()
     minfitness_each_gen = xp.min(-Sampler.lnprobability * c, axis=0)
@@ -358,9 +357,8 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
     # to test we return the mean values and make sure that they are close to the true values
     # and convert the pandas dataframe to a numpy array
     if(test):
-        print(np.asarray(individuals).mean(axis=0))
         mean = stats.loc['mean'].to_numpy()
-        return mean[:-1]#last value is the fitness don't need it for testing
+        return mean[:-1], Sampler.acceptance_fraction #last value is the fitness don't need it for testing
 
     else:  
         #save the population array
@@ -380,7 +378,7 @@ def fix_fitness_mcmc(fitness):
     where fitness can be log, abs, squared error, etc.
     emcee expects the fitness function to return ln(P(new)), P(old) is auto-calculated
     """
-    c = 1e-7  # empirical factor to modify mcmc acceptance rate, makes printed fitness different than actual, higher c increases acceptance rate
+    c = 1e-5  # empirical factor to modify mcmc acceptance rate, makes printed fitness different than actual, higher c increases acceptance rate
     return -fitness / c
     # return -0.5 * fitness ** 2 / c ** 2
 
@@ -393,7 +391,7 @@ class PickeableResidual():
     returned by cmaes
     """
 
-    def __init__(self, data, qxs, qzs, multiples, initial_guess, fit_mode='cmaes'):
+    def __init__(self, data, qxs, qzs, multiples, initial_guess, fit_mode='cmaes', test=False):
         """
         Parameters
         ----------
@@ -411,6 +409,7 @@ class PickeableResidual():
         self.multiples = multiples
         self.minitial_guess = initial_guess
         self.mfit_mode = fit_mode
+        self.test = test
 
     def __call__(self, fit_params):
         """
@@ -424,8 +423,14 @@ class PickeableResidual():
         -------
 
         """ 
-        print("fit_params", fit_params)
-        simp = fittingp_to_simp(fit_params, initial_guess=self.minitial_guess, multiples=self.multiples )
+        if self.test:
+
+            simp = fit_params
+
+        else:
+            simp = fittingp_to_simp(fit_params, initial_guess=self.minitial_guess, multiples=self.multiples)
+
+        simp = xp.asarray(simp)
 
         dwx, dwz, intensity0, bkg, height, botcd, beta = simp[:,0], simp[:,1], simp[:,2], simp[:,3], simp[:,4], simp[:,5], xp.array(simp[:,6:])#modified for gpu so that each variable is a list of arrays
         
@@ -443,15 +448,13 @@ class PickeableResidual():
             return res
         
         elif self.mfit_mode == 'mcmc':
-            # res = xp.where(xp.isinf(res), 10e7, res)
-            # print("res_gpu", res)
             return fix_fitness_mcmc(res)
 
         else:
             print("This mode does not exist")
             return -1
-        
 
+        
 
 def fittingp_to_simp(fit_params, initial_guess, multiples):
     """
@@ -476,17 +479,15 @@ def fittingp_to_simp(fit_params, initial_guess, multiples):
     simp: list of float32
         List of all the parameters converted
     """
-    nbc = len(initial_guess) - 6
-    # multiples = multiples * nbc
 
     simp = xp.asarray(multiples) * xp.asarray(fit_params) + xp.asarray(initial_guess)
 
     if(len(simp.shape) == 2):
         simp[:,:6] = xp.where(simp[:,:6] < 0, xp.nan, simp[:,:6])
-        simp[:,6:] = xp.where((simp[:,6:] <= 0) | (simp[:,6:] >= 91), xp.nan, simp[:,6:])
+        simp[:,6:] = xp.where((simp[:,6:] < 0) | (simp[:,6:] > 91), xp.nan, simp[:,6:])
     else:
         simp[:6] = xp.where(simp[:6] < 0, xp.nan, simp[:6])
-        simp[6:] = xp.where((simp[6:] <= 0) | (simp[6:] >= 91), xp.nan, simp[6:])#added 1 to 90 to avoid rounding errors
+        simp[6:] = xp.where((simp[6:] < 0) | (simp[6:] > 91), xp.nan, simp[6:])#added 1 to 90 to avoid rounding errors
         
     return simp
 
@@ -551,9 +552,20 @@ def corrections_dwi0bk(intensities, dw_factorx, dw_factorz,
     # TODO: use qxqzi data format as in other function
 
     # for intensity, qxi, qzi in zip(intensities, qxs, qzs):
+    qxs = xp.asarray(qxs)
+    qzs = xp.asarray(qzs)
+    dw_factorx = xp.asarray(dw_factorx)
+    dw_factorz = xp.asarray(dw_factorz)
 
-    qxs = xp.tile(qxs, xp.asarray(dw_factorx).shape[0]).reshape(xp.asarray(dw_factorx).shape[0], -1).T
-    qzs = xp.tile(qzs, xp.asarray(dw_factorz).shape[0]).reshape(xp.asarray(dw_factorz).shape[0], -1).T
+    # qxs = xp.tile(qxs, xp.asarray(dw_factorx).shape[0]).reshape(xp.asarray(dw_factorx).shape[0], -1).T
+    # qzs = xp.tile(qzs, xp.asarray(dw_factorz).shape[0]).reshape(xp.asarray(dw_factorz).shape[0], -1).T
+
+    qxs = qxs[..., xp.newaxis]
+    qzs = qzs[..., xp.newaxis]
+
+    # print("qxs shape: ", qxs.shape)
+    # print("qxs_tile shape: ", qxs_tile.shape)
+
 
     dw_array = xp.exp(-(qxs * dw_factorx) ** 2 +
                         (qzs * dw_factorz) ** 2)
@@ -636,9 +648,9 @@ def stacked_trapezoids(qys, qzs, y1, y2, height, langle, rangle=None, weight=Non
     height = xp.asarray(height)
     shift = height[:, xp.newaxis] * xp.arange(langle.shape[1])
 
-    #modify flattened qzs to match the shift so we can multiply them together without broadcasting error
-    qzs = xp.tile(qzs, langle.shape).reshape((langle.shape[0],langle.shape[1], -1))
-    qys = xp.tile(qys, langle.shape).reshape((langle.shape[0],langle.shape[1], -1))
+
+    qzs = qzs[xp.newaxis, xp.newaxis, ...]
+    qys = qys[xp.newaxis, xp.newaxis, ...]
 
     form_factor = xp.zeros(qzs.shape, dtype=complex)
     
@@ -649,24 +661,20 @@ def stacked_trapezoids(qys, qzs, y1, y2, height, langle, rangle=None, weight=Non
         coeff *= weight[:, xp.newaxis] * (1. + 1j)
 
     #we calculate y1 and y2 for each trapezoid and then send it to trapezoid_form_factor at once
-    height = xp.tile(height, langle.shape[1]).reshape(langle.shape[1], -1).T
+    # height = xp.tile(height, langle.shape[1]).reshape(langle.shape[1], -1).T
+    height = height[..., xp.newaxis]
     
-    #tile y1 and y2 to match the shape of langle and rangle
-    y1 = xp.tile(y1, langle.shape[1]).reshape(langle.shape[1], -1).T
-    y2 = xp.tile(y2, langle.shape[1]).reshape(langle.shape[1], -1).T
+    #modify y1 and y2 to match the shape of langle and rangle
+    y1 = y1[..., xp.newaxis] * xp.ones_like(langle)
+    y2 = y2[..., xp.newaxis] * xp.ones_like(langle)
 
-    #calculate y1 and y2 for each trapezoid increasingly using cumsum
-    #for values of height involving nan insert creates a problem
-    # y1 = y1+np.insert(xp.cumsum(height / xp.tan(langle), axis=1)[0][:-1], 0,  0)
-    # y2 = y2+np.insert(xp.cumsum(np.abs(height / xp.tan(np.pi - rangle)), axis=1)[0][:-1], 0, 0)
-
+    #calculate y1 and y2 for each trapezoid cumilatively using cumsum but need to preserve the first values
     y1_cumsum = xp.cumsum(height / xp.tan(langle), axis=1)
-    y2_cumsum = xp.cumsum(np.abs(height / np.tan(np.pi - rangle)), axis=1)
+    y2_cumsum = xp.cumsum(height / np.tan(np.pi - rangle), axis=1)
 
     y1[:,1:] = y1[:,1:]  +  y1_cumsum[:,:-1]
     y2[:,1:] = y2[:,1:]  + y2_cumsum[:,:-1]
 
-    
     form_factor = xp.sum(trapezoid_form_factor(qys = qys, 
                                                    qzs = qzs, 
                                                    y1 = y1, 
@@ -698,37 +706,18 @@ def log_error(exp_i_array, sim_i_array):
     error: float
         Sum of difference of log data, normalized by the number of data
     """
-    exp_i_array = xp.where(exp_i_array > 0, exp_i_array, xp.nan)
+    exp_i_array = xp.where(exp_i_array < 0, xp.nan, exp_i_array)
     
-    exp_i_array = xp.tile(exp_i_array, sim_i_array.shape[0]).reshape(sim_i_array.shape[0], -1)
+    # exp_i_array = xp.tile(exp_i_array, sim_i_array.shape[0]).reshape(sim_i_array.shape[0], -1)
+    exp_i_array = exp_i_array[xp.newaxis, ...]
+    exp_i_array = exp_i_array * xp.ones_like(sim_i_array)
 
     error = xp.nansum(xp.abs((xp.log10(exp_i_array) - xp.log10(sim_i_array))), axis=1)
 
+    #this is for normalization but we don't get the same results as the original code
     # error /= xp.count_nonzero(~xp.isnan(exp_i_array), axis=1)
 
+    #replace the error of the population with inf if all the parameters are nan
     error = xp.where(xp.all(xp.isnan(sim_i_array), axis=1), xp.inf, error)
-
-    return error
-
-
-def std_error(exp_i_array, sim_i_array):
-    """
-    Return the difference between two set of values (experimental and
-    simulated data), using the std error
-
-    Parameters
-    ----------
-    exp_i_array: numpy.ndarray((n))
-        Experimental intensities data
-    sim_i_array: numpy.ndarray((n))
-        Simulated intensities data
-
-    Returns
-    -------
-    error: float
-        Error between the two set of data (normalized by number of data)
-    """
-    error = xp.nansum(xp.abs((exp_i_array - sim_i_array)))
-    error /= xp.count_nonzero(~xp.isnan(exp_i_array))
 
     return error

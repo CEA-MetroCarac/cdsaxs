@@ -20,7 +20,6 @@ import scipy.interpolate
 import emcee
 import sys
 import multiprocessing as mp
-import fit as original_fit
 
 def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
           popsize, mu, n_default, restarts, tolhistfun, ftarget,
@@ -188,7 +187,7 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
             if last_best_fitnesses[-1] is None:
                 last_best_fitnesses.pop()
                 pass
-            # print(last_best_fitnesses)
+
             delta = max(last_best_fitnesses) - min(last_best_fitnesses)
             cond1 = tolhistfun is not None
             cond2 = len(last_best_fitnesses) == last_best_fitnesses.maxlen
@@ -253,7 +252,6 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
     # Create a PickeableResidual instance for data fitting
     residual = PickeableResidual(data=data, qxs=qxs, qzs=qzs, initial_guess=initial_guess, multiples=multiples, fit_mode='mcmc')
     process = mp.cpu_count()
-    print('process', process)
 
     def do_verbose(Sampler):
         if hasattr(Sampler, 'acceptance_fraction'):
@@ -291,14 +289,13 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
                 do_verbose(Sampler)
         else:
             # Use the default stretch move
-           individuals = [np.random.default_rng().normal(loc=0, scale=sigma, size=sigma.shape) for _ in range(nwalkers)]
-           Sampler = emcee.EnsembleSampler(nwalkers, N, residual, pool=None)
-           
-           Sampler.run_mcmc(individuals, nsteps, progress=True)
-           
-           if verbose:
-               do_verbose(Sampler)
-    
+            individuals = [np.random.default_rng().normal(loc=0, scale=sigma, size=sigma.shape) for _ in range(nwalkers)]
+            Sampler = emcee.EnsembleSampler(nwalkers, N, residual, pool=pool)
+            
+            Sampler.run_mcmc(individuals, nsteps, progress=True)
+            
+            if verbose:
+                do_verbose(Sampler)    
     pool.join()
     
     # Data processing and analysis
@@ -332,7 +329,7 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
     if(test):
         print(np.asarray(individuals).mean(axis=0))
         mean = stats.loc['mean'].to_numpy()
-        return mean[:-1]#last value is the fitness don't need it for testing
+        return mean[:-1], Sampler.acceptance_fraction#last value is the fitness don't need it for testing
 
     else:  
         #save the population array
@@ -365,7 +362,7 @@ class PickeableResidual():
     returned by cmaes
     """
 
-    def __init__(self, data, qxs, qzs, multiples, initial_guess, fit_mode='cmaes'):
+    def __init__(self, data, qxs, qzs, multiples, initial_guess, fit_mode='cmaes', test=False):
         """
         Parameters
         ----------
@@ -383,6 +380,7 @@ class PickeableResidual():
         self.multiples = multiples
         self.minitial_guess = initial_guess
         self.mfit_mode = fit_mode
+        self.test = test
 
     def __call__(self, fit_params):
         """
@@ -396,35 +394,41 @@ class PickeableResidual():
         -------
 
         """
-  #         print('test', fit_params, self.minitial_guess, self.multiples)
-        simp = fittingp_to_simp(fit_params, initial_guess=self.minitial_guess, multiples=self.multiples)
+        if self.test:
+
+            simp = fit_params
+            
+        else:
+            simp = fittingp_to_simp(fit_params, initial_guess=self.minitial_guess, multiples=self.multiples)
 
         if simp is None:
             if self.mfit_mode == "cmaes":
                 return np.inf
             else:
-                # print("inf")
-                return 10e7
+                return fix_fitness_mcmc(np.inf)
         
         dwx, dwz, intensity0, bkg, height, botcd, beta = simp[0], simp[1], simp[2], simp[3], simp[4], simp[5], np.array(simp[6:])
 
         langle = np.deg2rad(np.asarray(beta))
         rangle = np.deg2rad(np.asarray(beta))
         qxfit = []
+
+        # print("test-stacked",self.mqx, self.mqz, 0, botcd, height, langle, rangle)
+  
         for i in range(len(self.mqz)):
-            ff_core = original_fit.stacked_trapezoids(self.mqx[i], self.mqz[i], 0, botcd, height, langle, rangle)
+            ff_core = stacked_trapezoids(self.mqx[i], self.mqz[i], 0, botcd, height, langle, rangle)
             qxfit.append(ff_core)
-        qxfit = original_fit.corrections_dwi0bk(qxfit, dwx, dwz, intensity0, bkg, self.mqx, self.mqz)
+
+        qxfit = corrections_dwi0bk(qxfit, dwx, dwz, intensity0, bkg, self.mqx, self.mqz)
 
         res = 0
         for i in range(0, len(self.mdata), 1):
-            res += original_fit.log_error(self.mdata[i], qxfit[i])
+            res += log_error(self.mdata[i], qxfit[i])
 
         if self.mfit_mode == 'cmaes':
             return res
         
         elif self.mfit_mode == 'mcmc':
-            # print('res', res/120)
             return fix_fitness_mcmc(res)
 
         else:
@@ -456,7 +460,6 @@ def fittingp_to_simp(fit_params, initial_guess, multiples):
     simp: list of float32
         List of all the parameters converted
     """
-    nbc = len(initial_guess) - 6
 
     simp = np.asarray(multiples) * np.asarray(fit_params) + initial_guess
     if np.any(simp[:6] < 0):
@@ -620,3 +623,31 @@ def corrections_dwi0bk(intensities, dw_factorx, dw_factorz,
                                 + bkg_cste)
     return intensities_corr
 
+def log_error(exp_i_array, sim_i_array):
+    """
+    Return the difference between two set of values (experimental and
+    simulated data), using the log error
+
+    Parameters
+    ----------
+    exp_i_array: numpy.ndarray((n))
+        Experimental intensities data
+    sim_i_array: numpy.ndarray((n))
+        Simulated intensities data
+
+    Returns
+    -------
+    error: float
+        Sum of difference of log data, normalized by the number of data
+    """
+    exp_i_array = np.where(exp_i_array > 0, exp_i_array, np.nan)
+    error = np.nansum(np.abs((np.log10(exp_i_array) - np.log10(sim_i_array))))
+    error = np.where(np.all(np.isnan(sim_i_array)), np.inf, error)
+    
+    #older version of the code
+    # indice = exp_i_array > 0
+    # error = np.nansum(np.abs((np.log10(exp_i_array[indice]) -
+    #                           np.log10(sim_i_array[indice]))))
+    # error /= np.count_nonzero(~np.isnan(exp_i_array))
+
+    return error
