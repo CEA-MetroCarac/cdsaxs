@@ -631,7 +631,7 @@ def stacked_trapezoids(qys, qzs, y1, y2, height, langle, rangle=None, weight=Non
     Returns
     -------
     form_factor_intensity: numpy or cupy 2d array of floats
-        Intensity of the form factor
+        Intensity of the form factor (careful that the intensity is 10E-14 precision)
     """
     if not isinstance(langle, xp.ndarray):
         raise TypeError('angles should be array')
@@ -683,8 +683,10 @@ def stacked_trapezoids(qys, qzs, y1, y2, height, langle, rangle=None, weight=Non
     y2 = y2[..., xp.newaxis] * xp.ones_like(langle)
 
     #calculate y1 and y2 for each trapezoid cumilatively using cumsum but need to preserve the first values
-    y1_cumsum = xp.where(xp.isinf(xp.tan(langle)), np.roll(y1_cumsum, 1, axis=1), xp.cumsum(height / xp.tan(langle), axis=1))
-    y2_cumsum = xp.where(xp.isinf(xp.tan(np.pi - rangle)), np.roll(y2_cumsum, 1, axis=1), xp.cumsum(height / xp.tan(np.pi - rangle), axis=1))
+    #/!\ for 90 degrees, tan(90deg) is infinite so height/tan(90deg) is equal to the zero upto the precision of 10E-14 only
+
+    y1_cumsum = xp.cumsum(height / xp.tan(langle), axis=1)
+    y2_cumsum = xp.cumsum(height / xp.tan(np.pi - rangle), axis=1)
 
     y1[:,1:] = y1[:,1:]  +  y1_cumsum[:,:-1]
     y2[:,1:] = y2[:,1:]  + y2_cumsum[:,:-1]
