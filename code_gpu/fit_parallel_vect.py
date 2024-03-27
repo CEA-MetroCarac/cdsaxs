@@ -39,11 +39,11 @@ def cmaes(data, qxs, qzs, initial_guess, multiples, sigma, ngen,
 
     Parameters
     ----------
-    data: np or cp arrays of float32
+    data: np or cp arrays of floats
         Intensities to fit
     qxs, qzs: np or cp arrays of floats
         List of qx/qz linked to intensities
-    initial_guess: np or cp arrays of float32
+    initial_guess: np or cp arrays of floats
         Values entered by the user as starting point for the fit (list of
         Debye-Waller, I0, noise level, height, linewidth, [angles......])
     sigma: float
@@ -302,23 +302,23 @@ def mcmc(data, qxs, qzs, initial_guess, N, multiples, sigma, nsteps, nwalkers, g
         sigma = [sigma] * N
         
         print('{} parameters'.format(N))
-    
+
+    if isinstance(sigma, cp.ndarray):
+        sigma = sigma.get()
 
     if gaussian_move:
         # Use Gaussian move for the proposal distribution
-        individuals = [np.random.uniform(0, 10e-3, N) for _ in range(nwalkers)]
-        Sampler = emcee.EnsembleSampler(nwalkers, N, residual, moves=emcee.moves.GaussianMove(sigma), pool=None, vectorize=False)
+        individuals = [np.random.uniform(-100, 100, N) for _ in range(nwalkers)]
+        
+        Sampler = emcee.EnsembleSampler(nwalkers, N, residual, moves=emcee.moves.GaussianMove(sigma), pool=None, vectorize=True)
 
         Sampler.run_mcmc(individuals, nsteps, progress=True)
 
         if verbose:
             do_verbose(Sampler)
     else:
-        # Use the default stretch move
-        # if use_gpu==False & isinstance(sigma, cp.ndarray):
-        #     sigma = sigma.get()
 
-        individuals = [np.random.default_rng().normal(loc=0, scale=sigma.get(), size=sigma.shape) for _ in range(nwalkers)]
+        individuals = [np.random.default_rng().normal(loc=0, scale=sigma, size=sigma.shape) for _ in range(nwalkers)]
         Sampler = emcee.EnsembleSampler(nwalkers, N, residual, pool=None, vectorize=True)
               
         Sampler.run_mcmc(individuals, nsteps, progress=True)
@@ -398,9 +398,9 @@ class PickeableResidual():
         """
         Parameters
         ----------
-        data, qxs, qzs: np.arrays of float32
+        data, qxs, qzs: np.arrays of floats
             List of intensity/qx/qz at which the form factor has to be simulated
-        initial_guess: list of float32
+        initial_guess: list of floats
             List of the initial_guess of the user
         fit_mode: string
             Method to calculate the fitness, which is different between cmaes
@@ -418,7 +418,7 @@ class PickeableResidual():
         """
         Parameters
         ----------
-        fit_params: numpy or cupy arrays of arrays of parametres of float32
+        fit_params: numpy or cupy arrays of arrays of parametres of floats
             List of all the parameters value returned by CMAES/MCMC (list of
             Debye-Waller, I0, noise level, height, linewidth, [angles......])
 
@@ -472,16 +472,16 @@ def fittingp_to_simp(fit_params, initial_guess, multiples):
 
     Parameters
     ----------
-    fit_params: np or cp 1d or 2d array of float32
+    fit_params: np or cp 1d or 2d array of floats
         List of all the parameters value returned by CMAES/MCMC (list of
         Debye-Waller, I0, noise level, height, linewidth, [angles......])
-    initial_guess: np or cp array of float32
+    initial_guess: np or cp array of floats
         Values entered by the user as starting point for the fit (list of
         Debye-Waller, I0, noise level, height, linewidth, [angles......])
 
     Returns
     -------
-    simp: np or cp array of float32
+    simp: np or cp array of floats
         List of all the parameters converted
     """
 
@@ -505,16 +505,16 @@ def fittingp_to_simp1(fit_params, initial_guess, multiples):
 
     Parameters
     ----------
-    fit_params: list of float32
+    fit_params: list of floats
         List of all the parameters value returned by CMAES/MCMC (list of
         Debye-Waller, I0, noise level, height, linewidth, [angles......])
-    initial_guess: list of float32
+    initial_guess: list of floats
         Values entered by the user as starting point for the fit (list of
         Debye-Waller, I0, noise level, height, linewidth, [angles......])
 
     Returns
     -------
-    simp: list of float32
+    simp: list of floats
         List of all the parameters converted
     """
     nbc = len(initial_guess) - 6
@@ -676,7 +676,6 @@ def stacked_trapezoids(qys, qzs, y1, y2, height, langle, rangle=None, weight=Non
         coeff *= weight[:, xp.newaxis] * (1. + 1j)
 
     #we calculate y1 and y2 for each trapezoid and then send it to trapezoid_form_factor at once
-    # height = xp.tile(height, langle.shape[1]).reshape(langle.shape[1], -1).T
     height = height[..., xp.newaxis]
     
     #modify y1 and y2 to match the shape of langle and rangle
@@ -684,8 +683,8 @@ def stacked_trapezoids(qys, qzs, y1, y2, height, langle, rangle=None, weight=Non
     y2 = y2[..., xp.newaxis] * xp.ones_like(langle)
 
     #calculate y1 and y2 for each trapezoid cumilatively using cumsum but need to preserve the first values
-    y1_cumsum = xp.cumsum(height / xp.tan(langle), axis=1)
-    y2_cumsum = xp.cumsum(height / np.tan(np.pi - rangle), axis=1)
+    y1_cumsum = xp.where(xp.isinf(xp.tan(langle)), np.roll(y1_cumsum, 1, axis=1), xp.cumsum(height / xp.tan(langle), axis=1))
+    y2_cumsum = xp.where(xp.isinf(xp.tan(np.pi - rangle)), np.roll(y2_cumsum, 1, axis=1), xp.cumsum(height / xp.tan(np.pi - rangle), axis=1))
 
     y1[:,1:] = y1[:,1:]  +  y1_cumsum[:,:-1]
     y2[:,1:] = y2[:,1:]  + y2_cumsum[:,:-1]
@@ -723,7 +722,6 @@ def log_error(exp_i_array, sim_i_array):
     """
     exp_i_array = xp.where(exp_i_array < 0, xp.nan, exp_i_array)
     
-    # exp_i_array = xp.tile(exp_i_array, sim_i_array.shape[0]).reshape(sim_i_array.shape[0], -1)
     exp_i_array = exp_i_array[xp.newaxis, ...]
     exp_i_array = exp_i_array * xp.ones_like(sim_i_array)
 
