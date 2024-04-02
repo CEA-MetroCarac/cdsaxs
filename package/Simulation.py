@@ -1,14 +1,12 @@
-##combine both the geometry and diffraction in one class maybe call it the simulation class
-#use dictionary to get the info from the user and keep it as an attribute of the class
-#it should be general meaning that no matter the number of parametres cmaes should run
 import numpy as np
 import cupy as cp
 
 
 class TrapezoidGeometry:
 
-    def __init__(self, xp=np):
+    def __init__(self, xp=np, from_fitter=False):
         self.xp = xp
+        self.from_fitter = from_fitter
 
     @staticmethod
     def calculate_shift(self, height, langle):
@@ -25,12 +23,12 @@ class TrapezoidGeometry:
             shift = height[:, self.xp.newaxis] * self.xp.arange(langle.shape[1])
 
         elif (height.shape == langle.shape):
-            height_cumsum = self.xp.cumsum(height)
-            shift = self.xp.concatenate([self.xp.asarray([0]) , height_cumsum[:-1]])
-            shift = shift[..., self.xp.newaxis]
+            shift = self.xp.zeros_like(height)
+            height_cumsum = self.xp.cumsum(height, axis=1)
+            shift[:,1:] = height_cumsum[:,:-1]
 
         else:  
-            raise ValueError('Height should be a float or same size as angles')
+            raise ValueError('Height and langle should be compatible')
 
         return shift
     
@@ -77,7 +75,6 @@ class TrapezoidGeometry:
 
         #calculate y1 and y2 for each trapezoid cumilatively using cumsum but need to preserve the first values
         #/!\ for 90 degrees, tan(90deg) is infinite so height/tan(90deg) is equal to the zero upto the precision of 10E-14 only
-
         y1_cumsum = self.xp.cumsum(height / self.xp.tan(langle), axis=1)
         y2_cumsum = self.xp.cumsum(height / self.xp.tan(np.pi - rangle), axis=1)
 
@@ -123,6 +120,27 @@ class TrapezoidGeometry:
 
         return form_factor
     
+    @staticmethod
+    def corrections_dwi0bk(self, intensities, dw_factorx, dw_factorz,
+                       scaling, bkg_cste, qxs, qzs):
+        """
+        Apply corrections to the form factor
+        @param
+        intensities: a 2d array of floats
+        dw_factorx: a float
+        dw_factorz: a float
+        """
+
+        qxs = qxs[..., self.xp.newaxis]
+        qzs = qzs[..., self.xp.newaxis]
+
+        dw_array = self.xp.exp(-(qxs * dw_factorx) ** 2 +
+                            (qzs * dw_factorz) ** 2)
+
+        intensities_corr = (self.xp.asarray(intensities).T * dw_array * scaling
+                                + bkg_cste)
+        return intensities_corr.T
+    
     def calculate_form_factor(self, qys, qzs, params):
         """
         @param
@@ -131,8 +149,8 @@ class TrapezoidGeometry:
         form_factor: a 1d array of floats
         """
         height = params['height']
-        langle = params['langle']
-        rangle = params.get('rangle', langle)#if rangle is not in the dictionary set it to langle
+        langle = params['langles']
+        rangle = params.get('rangles', langle)#if rangle is not in the dictionary set it to langle
         y1_initial = params['y1']
         y2_initial = params['bot_cd']
         weight = params.get('weight', None)#check if weight is in the dictionary if not set it to None
@@ -155,7 +173,9 @@ class TrapezoidGeometry:
         if weight and not isinstance(weight, self.xp.ndarray):
             weight = self.xp.asarray(weight)
 
-        height = height[..., self.xp.newaxis]#add a new axis to height for further calculations
+        if not (height.shape == langle.shape):
+            height = height[..., self.xp.newaxis]#needs to be of same dimension as langles
+       
 
         y1, y2 = self.calculate_ycoords(self, height=height, langle=langle, rangle=rangle, y1=y1_initial, y2=y2_initial)
 
@@ -163,37 +183,22 @@ class TrapezoidGeometry:
 
         return form_factor
 
-    @staticmethod
-    def corrections_dwi0bk(self, intensities, dw_factorx, dw_factorz,
-                       scaling, bkg_cste, qxs, qzs):
-        """
-        Apply corrections to the form factor
-        @param
-        intensities: a 2d array of floats
-        dw_factorx: a float
-        dw_factorz: a float
-        """
-
-        qxs = qxs[..., self.xp.newaxis]
-        qzs = qzs[..., self.xp.newaxis]
-
-        dw_array = self.xp.exp(-(qxs * dw_factorx) ** 2 +
-                            (qzs * dw_factorz) ** 2)
-
-        intensities_corr = (self.xp.asarray(intensities).T * dw_array * scaling
-                                + bkg_cste)
-        return intensities_corr.T
     
-    def correct_form_factor(self, qys, qzs, params):
+    def correct_form_factor_intensity(self, qys, qzs, params):
         """
         @param
         params: a dictionary containing all the parameters needed to calculate the form factor
         @return
-        form_factor: a 1d array of floats
+        form_factor_intensity: a 2d array of floats
         """
+
+        #if the parameters not from Fitter class check params and correct if needed
+        if not self.from_fitter:
+            params = self.check_params(params)
+
         height = params['height']
-        langle = params['langle']
-        rangle = params.get('rangle', langle)#if rangle is not in the dictionary set it to langle
+        langle = params['langles']
+        rangle = params.get('rangles', langle)#if rangle is not in the dictionary set it to langle
         weight = params.get('weight', None)#check if weight is in the dictionary if not set it to None
 
         #making sure all the inputs are arrays
@@ -212,15 +217,71 @@ class TrapezoidGeometry:
 
         coeff = self.calculate_coefficients(self, qzs=qzs, height=height, langle=langle, weight=weight)
         form_factor = self.xp.sum(self.calculate_form_factor(qys=qys, qzs=qzs, params=params)*coeff, axis=1)
+        
+        form_factor_intensity = self.xp.absolute(form_factor) ** 2
 
         dwx = params['dwx']
         dwz = params['dwz']
         i0 = params['i0']
         bkg_cste = params['bkg_cste']
 
-        form_factor = self.corrections_dwi0bk(self, intensities=form_factor, dw_factorx=dwx, dw_factorz=dwz, scaling=i0, bkg_cste=bkg_cste, qxs=qys, qzs=qzs)
-        return form_factor
+        corrected_intensity = self.corrections_dwi0bk(self, intensities=form_factor_intensity, dw_factorx=dwx, dw_factorz=dwz, scaling=i0, bkg_cste=bkg_cste, qxs=qys, qzs=qzs)
+        
+        return corrected_intensity
+    
+    def check_params(self, params):
+        """
+        @param
+        params: a dictionary containing all the parameters needed to calculate the form factor
+        @return
+        params: a dictionary containing all the parameters needed to calculate the form factor
+        """
 
+        #check if all the required parameters are in the dictionary
+        if 'height' not in params:
+            raise ValueError('Height is required')
+        if 'langles' not in params:
+            raise ValueError('Left angles are required')
+        if 'y1' not in params:
+            raise ValueError('Y1 is required')
+        if 'bot_cd' not in params:
+            raise ValueError('Bottom center distance is required')
+        if 'dwx' not in params:
+            raise ValueError('Dwx is required')
+        if 'dwz' not in params:
+            raise ValueError('Dwz is required')
+        if 'i0' not in params:
+            raise ValueError('I0 is required')
+        if 'bkg_cste' not in params:
+            raise ValueError('Background constant is required')
+        
+        #handle the non required parameters
+        if 'rangles' not in params:
+            params['rangles'] = params['langles']
+        if 'weight' not in params:
+            params['weight'] = None
+        
+        #making sure that height is a 1d or 2d array and angles are 2d arrays
+        height = params['height']
+        langle = self.xp.asarray(params['langles'])
+        rangle = self.xp.asarray(params['rangles'])
+
+        if isinstance(height, float):
+            params['height'] =  self.xp.asarray([height])
+        elif isinstance(height, list):
+            params['height'] = self.xp.asarray([height])
+        else:
+            raise ValueError('Height should be a float or a list')
+
+        if langle.ndim == 1 or rangle.ndim == 1:
+            params['langles'] = [langle]
+            params['rangles'] = [rangle]
+        elif langle.ndim != 2 or rangle.ndim != 2:
+            raise ValueError('Left angles and right angles should be a 1d list or a list of lists')
+    
+
+
+        return params
 
 
 
@@ -231,21 +292,22 @@ qzs = np.linspace(-0.1, 0.1, 120)
 qxs = 2 * np.pi / pitch * np.ones_like(qzs)
 
 # Define initial parameters and multiples
+
+#Example of data entered by the user
 dwx = 0.1
 dwz = 0.1
 i0 = 10
 bkg = 0.1
-height = [23.48, 23.45]
-bot_cd = [54.6, 54.2]
-swa = [[85, 82, 83],[87, 85, 86]]
+height = [23.48, 23.48]
+bot_cd = [54.6]
+swa = [85, 82]
 
 langle = np.deg2rad(np.asarray(swa))
 rangle = np.deg2rad(np.asarray(swa))
 
-
-params = {'height': height,
-           'langle': langle, 
-           'rangle': rangle, 
+params1 = {'height': height,
+           'langles': langle, 
+           'rangles': rangle,
            'y1': 0, 
            'bot_cd': bot_cd,  
            'dwx': dwx, 
@@ -253,9 +315,33 @@ params = {'height': height,
            'i0': i0, 
            'bkg_cste': bkg}
 
-trapezoid = TrapezoidGeometry(np)
+#Example of data arriving from From fitter class
+dwx2 = 0.1
+dwz2 = 0.1
+i02 = 10
+bkg2 = 0.1
+height2 = [23.48, 23.45]
+bot_cd2 = [54.6, 54.2]
+swa2 = [[85, 82, 83],[87, 85, 86]]
+
+langle2 = np.deg2rad(np.asarray(swa2))
+rangle2 = np.deg2rad(np.asarray(swa2))
+
+params2 = {'height': height2,
+              'langles': langle2, 
+              'rangles': rangle2,
+              'y1': 0, 
+              'bot_cd': bot_cd2,  
+              'dwx': dwx2, 
+              'dwz': dwz2, 
+              'i0': i02, 
+              'bkg_cste': bkg2}
+
+Trapezoid1 = TrapezoidGeometry(np)
 
 
-form_factor = trapezoid.correct_form_factor(qys=qxs, qzs=qzs, params=params)
+Trapezoid2 = TrapezoidGeometry(np, from_fitter=True)
 
-print(form_factor)
+
+form_factor1 = Trapezoid1.correct_form_factor_intensity(qys=qxs, qzs=qzs, params=params1)
+form_factor2 = Trapezoid2.correct_form_factor_intensity(qys=qxs, qzs=qzs, params=params2)
