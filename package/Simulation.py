@@ -4,9 +4,66 @@ import cupy as cp
 
 class TrapezoidGeometry:
 
-    def __init__(self, xp=np, from_fitter=False):
+    def __init__(self, multiples, xp=np, from_fitter=False, initial_guess= None):
+        self.multiples = multiples
         self.xp = xp
         self.from_fitter = from_fitter
+        self.initial_guess = initial_guess
+
+        
+        if initial_guess is not None:
+            #get all the variations entered by the user from the initial_guess in an array
+            variations = self.xp.asarray([])
+            for key in initial_guess.keys():
+                if key == 'heights':
+                    variations = self.xp.concatenate((variations, initial_guess[key]['variation']))
+                elif key == 'langles':
+                    variations = self.xp.concatenate((variations, initial_guess[key]['variation']))
+                elif key == 'rangles':
+                    variations = self.xp.concatenate((variations, initial_guess[key]['variation']))
+                elif key == 'botcd':
+                    variations = self.xp.concatenate((variations, initial_guess[key]['variation']))
+                elif key == 'dwx':
+                    variations = self.xp.concatenate((variations, initial_guess[key]['variation']))
+                elif key == 'dwz':
+                    variations = self.xp.concatenate((variations, initial_guess[key]['variation']))
+                elif key == 'i0':
+                    variations = self.xp.concatenate((variations, initial_guess[key]['variation']))
+                elif key == 'bkg_cste':
+                    variations = self.xp.concatenate((variations, initial_guess[key]['variation']))
+            
+            #set the collected variations as an attribute
+            self.variations = variations
+
+
+            #check if values of heights and angles have the same shape or not
+            if not (self.xp.asarray(initial_guess['heights']['value']).shape ==  self.xp.asarray(initial_guess['langles']['value']).shape and self.xp.asarray(initial_guess['langles']['value']).shape == self.xp.asarray(initial_guess['rangles']['value']).shape) :
+                raise ValueError("Heights and left and right angles should be compatible")
+                
+            
+            #get all the values in the initial guess entered by the user in an array
+            initial_guess_values = self.xp.asarray([])
+            for key in initial_guess.keys():
+                if key == 'heights':
+                    initial_guess_values = self.xp.concatenate((initial_guess_values, initial_guess[key]['value']))
+                elif key == 'langles':
+                    initial_guess_values = self.xp.concatenate((initial_guess_values, initial_guess[key]['value']))
+                elif key == 'rangles':
+                    initial_guess_values = self.xp.concatenate((initial_guess_values, initial_guess[key]['value']))
+                elif key == 'botcd':
+                    initial_guess_values = self.xp.concatenate((initial_guess_values, initial_guess[key]['value']))
+                elif key == 'dwx':
+                    initial_guess_values = self.xp.concatenate((initial_guess_values, initial_guess[key]['value']))
+                elif key == 'dwz':
+                    initial_guess_values = self.xp.concatenate((initial_guess_values, initial_guess[key]['value']))
+                elif key == 'i0':
+                    initial_guess_values = self.xp.concatenate((initial_guess_values, initial_guess[key]['value']))
+                elif key == 'bkg_cste':
+                    initial_guess_values = self.xp.concatenate((initial_guess_values, initial_guess[key]['value']))
+                
+
+            #set the collected values as an attribute
+            self.initial_guess_values = initial_guess_values
 
     @staticmethod
     def calculate_shift(self, height, langle):
@@ -148,7 +205,7 @@ class TrapezoidGeometry:
         @return
         form_factor: a 1d array of floats
         """
-        height = params['height']
+        height = params['heights']
         langle = params['langles']
         rangle = params.get('rangles', langle)#if rangle is not in the dictionary set it to langle
         y1_initial = params['y1']
@@ -196,7 +253,7 @@ class TrapezoidGeometry:
         if not self.from_fitter:
             params = self.check_params(params)
 
-        height = params['height']
+        height = params['heights']
         langle = params['langles']
         rangle = params.get('rangles', langle)#if rangle is not in the dictionary set it to langle
         weight = params.get('weight', None)#check if weight is in the dictionary if not set it to None
@@ -231,6 +288,7 @@ class TrapezoidGeometry:
     
     def check_params(self, params):
         """
+        The purpose of this method is to check if all the required parameters are in the dictionary and to make sure that the inputs are arrays of the right shape
         @param
         params: a dictionary containing all the parameters needed to calculate the form factor
         @return
@@ -238,7 +296,7 @@ class TrapezoidGeometry:
         """
 
         #check if all the required parameters are in the dictionary
-        if 'height' not in params:
+        if 'heights' not in params:
             raise ValueError('Height is required')
         if 'langles' not in params:
             raise ValueError('Left angles are required')
@@ -262,14 +320,14 @@ class TrapezoidGeometry:
             params['weight'] = None
         
         #making sure that height is a 1d or 2d array and angles are 2d arrays
-        height = params['height']
+        height = params['heights']
         langle = self.xp.asarray(params['langles'])
         rangle = self.xp.asarray(params['rangles'])
 
         if isinstance(height, float):
-            params['height'] =  self.xp.asarray([height])
+            params['heights'] =  self.xp.asarray([height])
         elif isinstance(height, list):
-            params['height'] = self.xp.asarray([height])
+            params['heights'] = self.xp.asarray([height])
         else:
             raise ValueError('Height should be a float or a list')
 
@@ -282,7 +340,110 @@ class TrapezoidGeometry:
 
 
         return params
+    
+    def convert_fitparams(self, fit_params):
+        """
+        Convert the fit_params from the optimizer to the simp format used above in __call__
 
+        Parameters
+        ----------
+        fit_params: list of floats
+            List of the parameters returned by the optimizer
+
+        Returns
+        -------
+        simp: list of floats
+            List of the parameters in the simp format
+        """
+
+        #convert fitparams to sensible data
+        fit_params = fit_params * self.variations + self.initial_guess_values
+
+        #determine the number of trapezoids
+        ntrapezoid = len(self.initial_guess['langles']['value'])
+
+        #create a dictionary to store the parametres obtained from the fitter
+        simp = {}
+
+        #each time we will check if the height entered by user is constant or not and if the user wants symmetric case(langle=rangle) or not
+        height_is_list = isinstance(self.initial_guess[key]['value'], list)
+        rangles_exists = 'rangles' in self.initial_guess.keys()
+
+        for key in self.initial_guess.keys():
+
+            if key == 'heights':
+                if height_is_list:
+                    simp[key] = fit_params[:,ntrapezoid+1]
+                else:
+                    simp[key] = fit_params[:,0]
+
+            elif key == 'langles':
+                if height_is_list:
+                    simp[key] = fit_params[:,ntrapezoid+1:2*ntrapezoid+1]
+                else:
+                    simp[key] = fit_params[:,1:ntrapezoid+1]
+            
+            elif key == 'rangles':
+                if height_is_list:
+                    simp[key] = fit_params[:,2*ntrapezoid+1:3*ntrapezoid+1]
+                else:
+                    simp[key] = fit_params[:,ntrapezoid+1:2*ntrapezoid+1]
+
+            elif key == 'botcd':
+                if height_is_list and rangles_exists:
+                    simp[key] = fit_params[:,3*ntrapezoid+1]
+                elif height_is_list and not rangles_exists:
+                    simp[key] = fit_params[:,2*ntrapezoid+1]
+                elif not height_is_list and rangles_exists:
+                    simp[key] = fit_params[:,2*ntrapezoid+1]
+                else:
+                    simp[key] = fit_params[:,ntrapezoid+1]
+                
+            
+            elif key == 'dwx':
+                if height_is_list and rangles_exists:
+                    simp[key] = fit_params[:,3*ntrapezoid+2]
+                elif height_is_list and not rangles_exists:
+                    simp[key] = fit_params[:,2*ntrapezoid+2]
+                elif not height_is_list and rangles_exists:
+                    simp[key] = fit_params[:,2*ntrapezoid+2]
+                else:
+                    simp[key] = fit_params[:,ntrapezoid+2]
+
+            elif key == 'dwz':
+                if height_is_list and rangles_exists:
+                    simp[key] = fit_params[:,3*ntrapezoid+3]
+                elif height_is_list and not rangles_exists:
+                    simp[key] = fit_params[:,2*ntrapezoid+3]
+                elif not height_is_list and rangles_exists:
+                    simp[key] = fit_params[:,2*ntrapezoid+3]
+                else:
+                    simp[key] = fit_params[:,ntrapezoid+3]
+
+            elif key == 'i0':
+                if height_is_list and rangles_exists:
+                    simp[key] = fit_params[:,3*ntrapezoid+4]
+                elif height_is_list and not rangles_exists:
+                    simp[key] = fit_params[:,2*ntrapezoid+4]
+                elif not height_is_list and rangles_exists:
+                    simp[key] = fit_params[:,2*ntrapezoid+4]
+                else:
+                    simp[key] = fit_params[:,ntrapezoid+4]
+
+            elif key == 'bkg_cste':
+                if height_is_list and rangles_exists:
+                    simp[key] = fit_params[:,3*ntrapezoid+5]
+                elif height_is_list and not rangles_exists:
+                    simp[key] = fit_params[:,2*ntrapezoid+5]
+                elif not height_is_list and rangles_exists:
+                    simp[key] = fit_params[:,2*ntrapezoid+5]
+                else:
+                    simp[key] = fit_params[:,ntrapezoid+5]
+
+            
+
+        
+        return simp
 
 
 
@@ -305,7 +466,7 @@ swa = [85, 82]
 langle = np.deg2rad(np.asarray(swa))
 rangle = np.deg2rad(np.asarray(swa))
 
-params1 = {'height': height,
+params1 = {'heights': height,
            'langles': langle, 
            'rangles': rangle,
            'y1': 0, 
@@ -327,7 +488,7 @@ swa2 = [[85, 82, 83],[87, 85, 86]]
 langle2 = np.deg2rad(np.asarray(swa2))
 rangle2 = np.deg2rad(np.asarray(swa2))
 
-params2 = {'height': height2,
+params2 = {'heights': height2,
               'langles': langle2, 
               'rangles': rangle2,
               'y1': 0, 
