@@ -24,6 +24,9 @@ class StackedTrapezoidSimulation:
 
         corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, params=params, fitparams=fitparams)
 
+        if not self.from_fitter:
+            return corrected_intensity[0]
+
         return corrected_intensity
 
     def set_from_fitter(self, from_fitter):
