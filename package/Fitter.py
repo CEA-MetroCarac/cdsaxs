@@ -202,7 +202,7 @@ class Fitter():
 
         best_uncorr = halloffame[0]  # np.abs(halloffame[0])
         best_fitness = halloffame[0].fitness.values[0]
-        best_corr = [Simulation.TrapezoidGeometry.extract_params(best_uncorr)]
+        best_corr = Simulation.TrapezoidGeometry.extract_params([best_uncorr], for_best_fit=True)
 
 
         if verbose:
@@ -226,9 +226,9 @@ class Fitter():
             fitness_arr = fitness_arr.get()
 
         #create a new method to save the population and fitness arrays
-        population_fr = pd.DataFrame(np.column_stack((population_arr, fitness_arr)))
-        if dir_save is not None:
-            population_fr.to_excel(os.path.join(dir_save, "output.xlsx"))
+        # population_fr = pd.DataFrame(np.column_stack((population_arr, fitness_arr)))
+        # if dir_save is not None:
+        #     population_fr.to_excel(os.path.join(dir_save, "output.xlsx"))
 
         return best_corr, best_fitness
     
@@ -361,60 +361,3 @@ class Fitter():
     #         #save the stat data
     #         stats.to_csv(os.path.join('./', 'test.csv')) 
     #         print("CSV saved to {}".format(path))
-
-
-####################################################################TESTING####################################################################
-
-
-####################################TESTING####################################
-pitch = 100 #nm distance between two trapezoidal bars
-qzs = np.linspace(-0.1, 0.1, 20)
-qxs = 2 * np.pi / pitch * np.ones_like(qzs)
-
-# Define initial parameters and multiples
-
-#Initial parameters
-dwx = 0.1
-dwz = 0.1
-i0 = 10
-bkg = 0.1
-y1 = 0
-height = [23.48]
-bot_cd = 54.6
-swa = [85]
-
-langle = np.deg2rad(np.asarray(swa))
-rangle = np.deg2rad(np.asarray(swa))
-
-#simulate data
-params = {'heights': height,
-            'langles': langle,
-            'rangles': rangle,
-            'y1': y1,
-            'bot_cd': bot_cd,
-            'dwx': dwx,
-            'dwz': dwz,
-            'i0': i0,
-            'bkg_cste': bkg
-            }
-
-Simulation1 = StackedTrapezoidSimulation(xp=np, qys=qxs, qzs=qzs)
-
-intensity = Simulation1.simulate_diffraction(params=params)
-
-#fit the data
-params1 = {'heights': {'value': height, 'variation': 10E-5},
-            'langles': {'value': langle, 'variation': 10E-5},
-            'rangles': {'value': None, 'variation': 10E-5},
-            'y1': {'value': y1, 'variation': 10E-5},
-            'bot_cd': {'value': bot_cd, 'variation': 10E-5},
-            'dwx': {'value': dwx, 'variation': 10E-5},
-            'dwz': {'value': dwz, 'variation': 10E-5},
-            'i0': {'value': i0, 'variation': 10E-5},
-            'bkg_cste': {'value': bkg, 'variation': 10E-5}
-            }
-
-Simulation = StackedTrapezoidSimulation(xp=np, qys=qxs, qzs=qzs, initial_guess=params1)
-Fitter = Fitter(Simulation=Simulation, exp_data=intensity[0])
-
-best_corr, best_fitness = Fitter.cmaes(sigma=100, ngen=2, popsize=10, mu=10, n_default=8, restarts=0, tolhistfun=5e-5, ftarget=None, verbose=False, dir_save=None)

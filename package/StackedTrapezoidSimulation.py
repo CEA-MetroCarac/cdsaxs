@@ -353,7 +353,7 @@ class StackedTrapezoidGeometry:
 
         return None
 
-    def extract_params(self, fitparams=None, params=None):
+    def extract_params(self, fitparams=None, params=None, for_best_fit=False):
 
         """
         Extract the relevant values from the fitparams to calculate the form factor
@@ -390,27 +390,26 @@ class StackedTrapezoidGeometry:
             #get the indices to assign relevant values from fit_params
             if self.fitparams_indices is None:
                 self.set_fitparams_indices()
-                indices = self.fitparams_indices
-
-            if not indices['heights']['stop'] == None:
-                height = fitparams[:, indices['heights']['start']:indices['heights']['stop']]
+            
+            if not self.fitparams_indices['heights']['stop'] == None:
+                height = fitparams[:, self.fitparams_indices['heights']['start']:self.fitparams_indices['heights']['stop']]
             else:
-                height = fitparams[:, indices['heights']['start']]
+                height = fitparams[:, self.fitparams_indices['heights']['start']]
 
-            langle = fitparams[:, indices['langles']['start']:indices['langles']['stop']]
+            langle = fitparams[:, self.fitparams_indices['langles']['start']:self.fitparams_indices['langles']['stop']]
 
-            if 'rangles' in indices.keys() and indices['rangles']:
-                rangle = fitparams[:, indices['rangles']['start']:indices['rangles']['stop']]
+            if 'rangles' in self.fitparams_indices.keys() and self.fitparams_indices['rangles']:
+                rangle = fitparams[:, self.fitparams_indices['rangles']['start']:self.fitparams_indices['rangles']['stop']]
             else:
                 rangle = None
             
-            y1_initial = fitparams[:, indices['y1']['start']] 
-            y2_initial = fitparams[:, indices['bot_cd']['start']]
+            y1_initial = fitparams[:, self.fitparams_indices['y1']['start']] 
+            y2_initial = fitparams[:, self.fitparams_indices['bot_cd']['start']]
             
-            dwx = fitparams[:, indices['dwx']['start']]
-            dwz = fitparams[:, indices['dwz']['start']]
-            i0 = fitparams[:, indices['i0']['start']]
-            bkg_cste = fitparams[:, indices['bkg_cste']['start']]
+            dwx = fitparams[:, self.fitparams_indices['dwx']['start']]
+            dwz = fitparams[:, self.fitparams_indices['dwz']['start']]
+            i0 = fitparams[:, self.fitparams_indices['i0']['start']]
+            bkg_cste = fitparams[:, self.fitparams_indices['bkg_cste']['start']]
             
             weight = self.initial_guess.get('weight', None)
 
@@ -429,7 +428,7 @@ class StackedTrapezoidGeometry:
             
 
         #making sure all the inputs are arrays
-        if isinstance(height,list) and not isinstance(height, self.xp.ndarray):
+        if isinstance(height, list) and not isinstance(height, self.xp.ndarray):
             height = self.xp.asarray(height)
         if not isinstance(langle, self.xp.ndarray):
             langle = self.xp.asarray(langle)
@@ -437,6 +436,21 @@ class StackedTrapezoidGeometry:
             rangle = self.xp.asarray(rangle)
         if weight and not isinstance(weight, self.xp.ndarray):
             weight = self.xp.asarray(weight)
+
+        if for_best_fit:
+            return {'heights': height[0], 'langles': langle[0], 'rangles': rangle[0] if rangle else None, 'y1': y1_initial, 'bot_cd': y2_initial, 'dwx': dwx, 'dwz': dwz, 'i0': i0, 'bkg_cste': bkg_cste}
+        
+        #check if the values make physical sense
+        height = self.xp.where(height < 0, self.xp.nan , height)
+        langle = self.xp.where( (langle < 0) | (langle[:,] > 91) , self.xp.nan , langle)
+        if rangle is not None:
+            rangle = self.xp.where( (rangle < 0) | (rangle > 91) , self.xp.nan , rangle)
+        y1_initial = self.xp.where(y1_initial < 0, self.xp.nan , y1_initial)
+        y2_initial = self.xp.where(y2_initial < 0, self.xp.nan , y2_initial)
+        dwx = self.xp.where(dwx < 0, self.xp.nan , dwx)
+        dwz = self.xp.where(dwz < 0, self.xp.nan , dwz)
+        i0 = self.xp.where(i0 < 0, self.xp.nan , i0)
+        bkg_cste = self.xp.where(bkg_cste < 0, self.xp.nan , bkg_cste)
 
         return height, langle, rangle, y1_initial, y2_initial, weight, dwx, dwz, i0, bkg_cste
 
