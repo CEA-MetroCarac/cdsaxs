@@ -1,39 +1,35 @@
 import numpy as np
 import cupy as cp
 import os
-from cdsaxs.package.Simulation import TrapezoidGeometry
+from StackedTrapezoidSimulation import StackedTrapezoidSimulation
 
 
 
 class PicklableResidual:
     """
-    Factory created to call the residual function (which need to be pickled)
-    in the MCMC andCMAES approach. This factory will allow to have the data,
-    qx, qz, initial_guess, fit_mode to co;pare with the set of parameters
-    returned by cmaes
+    Class to calculate the residual between the experimental data and the
+    simulated data.
     """
 
-    def __init__(self, data, qxs, qzs, multiples, initial_guess, fit_mode='cmaes', test=False, xp=np, trapezoidGeometry=None):
+    def __init__(self, data, fit_mode='cmaes', xp=np, Simulation=None):
         """
         Parameters
         ----------
         data, qxs, qzs: np.arrays of floats
-            List of intensity/qx/qz at which the form factor has to be simulated
-        initial_guess: list of floats
-            List of the initial_guess of the user
+            List of experimental intensity data and qx, qz at which the form factor has to be simulated
         fit_mode: string
             Method to calculate the fitness, which is different between cmaes
             and mcmc
+        xp: module
+            Numpy or cupy
+        Simulation: class
+            Class to simulate the diffraction pattern (for now only StackedTrapezoidSimulation)
         """
         self.mdata = data
-        self.mqz = qzs
-        self.mqx = qxs
-        self.multiples = multiples
-        self.minitial_guess = initial_guess
         self.mfit_mode = fit_mode
-        self.test = test
         self.xp = xp
-        self.trapezoidGeometry = trapezoidGeometry
+        self.Simulation = Simulation
+
 
     def __call__(self, fit_params):
         """
@@ -42,34 +38,21 @@ class PicklableResidual:
         fit_params: numpy or cupy arrays of arrays of parametres of floats
             List of all the parameters value returned by CMAES/MCMC (list of
             Debye-Waller, I0, noise level, height, linewidth, [angles......])
+            (not be given by the user if test=False, unexpected behavior occurs if not obtained from Fitter class)
 
         Returns
         -------
 
         """
-        if not isinstance(fit_params, self.xp.ndarray):
+
+        if fit_params is not None and not isinstance(fit_params, self.xp.ndarray):
             fit_params = self.xp.array(fit_params)
-        
-        if self.test:
-
-            simp = fit_params
-
-        else:
-            simp = TrapezoidGeometry.fittingp_to_simp(fit_params, initial_guess=self.minitial_guess, multiples=self.multiples)
-
-        simp = self.xp.asarray(simp)
-
-        dwx, dwz, intensity0, bkg, height, botcd, beta = simp[:,0], simp[:,1], simp[:,2], simp[:,3], simp[:,4], simp[:,5], self.xp.array(simp[:,6:])#modified for gpu so that each variable is a list of arrays
-        
-        langle = self.xp.deg2rad(self.xp.asarray(beta))
-        rangle = self.xp.deg2rad(self.xp.asarray(beta))
-
-        qxfit = TrapezoidGeometry.stacked_trapezoids(self.mqx, self.mqz, self.xp.zeros(botcd.shape), botcd, height, langle, rangle)
-
-        qxfit = TrapezoidGeometry.corrections_dwi0bk(qxfit, dwx, dwz, intensity0, bkg, self.mqx, self.mqz)
-
+            qxfit = self.Simulation.simulate_diffraction(fitparams=fit_params)
 
         res = self.log_error(self.mdata, qxfit)
+        
+        if self.xp == cp:
+            res = res.get()
 
         if self.mfit_mode == 'cmaes':
             return res
@@ -123,5 +106,3 @@ class PicklableResidual:
         """
         c = 1e-5  # empirical factor to modify mcmc acceptance rate, makes printed fitness different than actual, higher c increases acceptance rate
         return -fitness / c
-
-
