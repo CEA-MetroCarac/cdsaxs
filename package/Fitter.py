@@ -204,10 +204,10 @@ class Fitter:
             [list(individual) for generation in population_list for individual in
             generation])
         
-        population_arr = [self.Simulation.TrapezoidGeometry.extract_params(population_arr)]
+        population_arr = self.Simulation.TrapezoidGeometry.extract_params(population_arr, for_saving=True)
 
         fitness_arr = np.array(
-            [individual.fitness.values[0] for generation in population_list for
+            [ [individual.fitness.values[0]] for generation in population_list for
             individual in generation])
         
         # convert to numpy arrays if using GPU
@@ -215,10 +215,16 @@ class Fitter:
             population_arr = population_arr.get()
             fitness_arr = fitness_arr.get()
 
-        #create a new method to save the population and fitness arrays
-        # population_fr = pd.DataFrame(np.column_stack((population_arr, fitness_arr)))
-        # if dir_save is not None:
-        #     population_fr.to_excel(os.path.join(dir_save, "output.xlsx"))
+        # create a new method to save the population and fitness arrays
+        population_with_fitness = np.asarray([np.append(population_arr[i], fitness_arr[i]) for i in range(len(population_arr))])
+        
+        population_with_fitness = population_with_fitness.reshape( ( popsize, n_default + 1 ) ) #plus one for fitness
+
+
+        population_fr = pd.DataFrame( population_with_fitness )
+
+        if dir_save is not None:
+            population_fr.to_csv(os.path.join(dir_save, "output.csv"))
 
         return best_corr, best_fitness
     
@@ -258,7 +264,7 @@ class Fitter:
         self.Simulation.set_from_fitter(True)
 
         #declare Fitness function and register
-        Residual = PicklableResidual(self.exp_data, fit_mode='cmaes', xp=np, Simulation=self.Simulation)
+        Residual = PicklableResidual(self.exp_data, fit_mode='mcmc', xp=np, Simulation=self.Simulation)
 
 
         def do_verbose(Sampler):
@@ -269,7 +275,7 @@ class Fitter:
             sys.stdout.flush()
         
         # Empirical factor to modify MCMC acceptance rate
-        c = 1e-5
+        c = Residual.c
         
         # Generate a random seed if none is provided
         if seed is None:
@@ -308,53 +314,63 @@ class Fitter:
 
             if verbose:
                 do_verbose(Sampler)
+            
+
+        #Autocorelation time to find burnin steps
+        tau = Sampler.get_autocorr_time(tol=5)
+        burnin = int(2 * np.max(tau))
         
         
         # Data processing and analysis
-        s = Sampler.chain.shape
+        s = Sampler.get_chain(discard=burnin).shape
 
-        flatchain = xp.transpose(Sampler.chain, axes=[1, 0, 2]).reshape(s[0] * s[1], s[2])
-        flatlnprobability = Sampler.lnprobability.transpose().flatten()
-        minfitness_each_gen = xp.min(-Sampler.lnprobability * c, axis=0)
+        flatchain = xp.transpose(Sampler.get_chain(discard=burnin), axes=[1, 0, 2]).reshape(s[0] * s[1], s[2])
+        flatlnprobability = Sampler.get_log_prob(discard=burnin).transpose().flatten()
+        minfitness_each_gen = xp.min(-Sampler.get_log_prob(discard=burnin) * c, axis=0)
         
+        #convert log probability to usual fitness
         flatfitness = -flatlnprobability * c
+
+        #find the best individual and convert it to the correct form
         best_index = np.argmin(flatfitness)
         best_fitness = flatfitness[best_index]
         best_uncorr = flatchain[best_index]
-        best_corr = self.Simulation.TrapezoidGeometry.extract_params([best_uncorr], for_best_fit=True)
+        best_corr = self.Simulation.TrapezoidGeometry.extract_params(fitparams=[best_uncorr], for_best_fit=True)
       
         
-        # population_array = self.Simulation.TrapezoidGeometry.extract_params(flatchain)
+        population_array = self.Simulation.TrapezoidGeometry.extract_params(flatchain, for_saving=True)
     
-        # print(population_array)
-        # if xp == cp:
-        #     population_array = population_array.get()
+        if xp == cp:
+            population_array = population_array.get()
 
-        # population_frame = pd.DataFrame(np.column_stack((population_array, flatfitness)))
-        # gen_start = 0
-        # gen_stop = len(flatfitness)
-        # gen_step = 1
-        # popsize = int(population_frame.shape[0] / len(flatfitness))
-        # index = []
-        # for i in range(gen_start, gen_stop, gen_step):
-        #     index.extend(list(range(i * popsize, (i + 1) * popsize)))
-        # resampled_frame = population_frame.iloc[index]
-        # stats = resampled_frame.describe()
+        # create a new method to save the population and fitness arrays
+        population_with_fitness = np.asarray([np.append(population_array[i], flatfitness[i]) for i in range(len(population_array))])
+        population_with_fitness = population_with_fitness.reshape( ( s[0]*s[1] , N+1 ) ) #plus one for fitness
 
-        # to test we return the mean values and make sure that they are close to the true values
-        # and convert the pandas dataframe to a numpy array
+        population_frame = pd.DataFrame( population_with_fitness )
+
+        gen_start = 0
+        gen_stop = len(flatfitness)
+        gen_step = 1
+        popsize = int(population_frame.shape[0] / len(flatfitness))
+        index = []
+        for i in range(gen_start, gen_stop, gen_step):
+            index.extend(list(range(i * popsize, (i + 1) * popsize)))
+        resampled_frame = population_frame.iloc[index]
+        #remove nan and inf values
+        resampled_frame = resampled_frame.dropna()
+        stats = resampled_frame.describe()
+
         if(test):
-
             return best_corr
 
-        # else:  
-        #     #save the population array
-        #     path = os.path.join('./', 'poparr.npy')
-        #     np.save(os.path.join(path), population_array)
+        else:  
+            #save the population array
+            # path = os.path.join('./', 'poparr.npy')
+            # np.save(os.path.join(path), population_array)
 
-        #     #save the stat data
-        #     stats.to_csv(os.path.join('./', 'test.csv')) 
-        #     print("CSV saved to {}".format(path))
+            #save the stat data
+            stats.to_csv(os.path.join('./', 'test.csv'))
 
 
 
@@ -411,5 +427,5 @@ Simulation2 = StackedTrapezoidSimulation(xp=np, qys=qxs, qzs=qzs, initial_guess=
 
 Fitter1 = Fitter(Simulation=Simulation2, exp_data=intensity)
 
-Fitter1.mcmc(N=9, sigma = np.asarray([100] * 9), nsteps=10, nwalkers=18, test=True)
-Fitter1.cmaes(sigma=100, ngen=10, popsize=10, mu=10, n_default=9, restarts=10, tolhistfun=10, ftarget=10, restart_from_best=True, verbose=False, dir_save=None)
+# print(Fitter1.mcmc(N=9, sigma = np.asarray([100] * 9), nsteps=1000, nwalkers=100, test=True))
+Fitter1.cmaes(sigma=100, ngen=80, popsize=40, mu=10, n_default=9, restarts=10, tolhistfun=10, ftarget=10, restart_from_best=True, verbose=False, dir_save='.')

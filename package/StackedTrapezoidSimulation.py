@@ -356,7 +356,7 @@ class StackedTrapezoidGeometry:
 
         return None
 
-    def extract_params(self, fitparams=None, params=None, for_best_fit=False):
+    def extract_params(self, fitparams=None, params=None, for_best_fit=False, for_saving=False):
 
         """
         Extract the relevant values from the fitparams to calculate the form factor
@@ -440,9 +440,15 @@ class StackedTrapezoidGeometry:
         if weight and not isinstance(weight, self.xp.ndarray):
             weight = self.xp.asarray(weight)
 
+        #convert rangle and langle back to degrees
+        langle = self.xp.rad2deg(langle)
+        if rangle is not None:
+            rangle = self.xp.rad2deg(rangle)
+
         if for_best_fit:
             return {'heights': height[0], 'langles': langle[0], 'rangles': rangle[0] if rangle else None, 'y1': y1_initial, 'bot_cd': y2_initial, 'dwx': dwx, 'dwz': dwz, 'i0': i0, 'bkg_cste': bkg_cste}
-        
+
+
         #check if the values make physical sense
         height = self.xp.where(height < 0, self.xp.nan , height)
         langle = self.xp.where( (langle < 0) | (langle[:,] > 91) , self.xp.nan , langle)
@@ -454,6 +460,21 @@ class StackedTrapezoidGeometry:
         dwz = self.xp.where(dwz < 0, self.xp.nan , dwz)
         i0 = self.xp.where(i0 < 0, self.xp.nan , i0)
         bkg_cste = self.xp.where(bkg_cste < 0, self.xp.nan , bkg_cste)
+
+        if for_saving:
+            #bundle the values of same generation together in a list
+            population_array  = []
+            for i in range(np.shape(height)[0]):
+                if weight is None and rangle is None:
+                    population_array.append( [ height[i], langle[i], [y1_initial[i]], [y2_initial[i]], [dwx[i]], [dwz[i]], [i0[i]], [bkg_cste[i]] ] )
+                elif weight is None and rangle is not None:
+                    population_array.append( [ height[i], langle[i], rangle[i], [y1_initial[i]], [y2_initial[i]], [dwx[i]], [dwz[i]], [i0[i]], [bkg_cste[i]] ] )
+                elif weight is not None and rangle is None:
+                    population_array.append( [ height[i], langle[i], [y1_initial[i]], [y2_initial[i]], weight[i], [dwx[i]], [dwz[i]], [i0[i]], [bkg_cste[i]] ] )
+                else:
+                    population_array.append( [ height[i], langle[i], rangle[i], [y1_initial[i]], [y2_initial[i]], weight[i], [dwx[i]], [dwz[i]], [i0[i]], [bkg_cste[i]] ] )
+                    
+            return self.xp.asarray(population_array)
 
         return height, langle, rangle, y1_initial, y2_initial, weight, dwx, dwz, i0, bkg_cste
 

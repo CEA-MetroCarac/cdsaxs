@@ -11,7 +11,7 @@ class PicklableResidual:
     simulated data.
     """
 
-    def __init__(self, data, fit_mode='cmaes', xp=np, Simulation=None):
+    def __init__(self, data, fit_mode='cmaes', xp=np, Simulation=None, c=1e-5):
         """
         Parameters
         ----------
@@ -24,11 +24,15 @@ class PicklableResidual:
             Numpy or cupy
         Simulation: class
             Class to simulate the diffraction pattern (for now only StackedTrapezoidSimulation)
+        c: float
+            Empirical factor to modify mcmc acceptance rate, makes printed fitness different than actual,
+            higher c increases acceptance rate
         """
         self.mdata = data
         self.mfit_mode = fit_mode
         self.xp = xp
         self.Simulation = Simulation
+        self.c = c
 
 
     def __call__(self, fit_params):
@@ -96,7 +100,7 @@ class PicklableResidual:
 
         return error
 
-    def fix_fitness_mcmc(fitness):
+    def fix_fitness_mcmc(self, fitness):
         """
         Metropolis-Hastings criterion: acceptance probability equal to ratio between P(new)/P(old)
         where P is proportional to probability distribution we want to find
@@ -104,5 +108,5 @@ class PicklableResidual:
         where fitness can be log, abs, squared error, etc.
         emcee expects the fitness function to return ln(P(new)), P(old) is auto-calculated
         """
-        c = 1e-5  # empirical factor to modify mcmc acceptance rate, makes printed fitness different than actual, higher c increases acceptance rate
-        return -fitness / c
+        # empirical factor to modify mcmc acceptance rate, makes printed fitness different than actual, higher c increases acceptance rate
+        return -fitness / self.c
