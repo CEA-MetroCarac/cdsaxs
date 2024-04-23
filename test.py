@@ -78,9 +78,9 @@ def test_PickeableResidual():
     #the parallel version takes one set of parameters at a time and is not designed to deal with nans hence this approach
     res_par = [residual_par(x) for x in simp]
     
-    # np.testing.assert_allclose(res_vect, res_par, rtol=1e-3, atol=0.0001)
-    # print("test passed")
-    print("res_vect: ", res_vect, "res_par: ", res_par)
+    np.testing.assert_allclose(res_vect, res_par, rtol=1e-3, atol=0.0001)
+    print("test passed")
+    # print("res_vect: ", res_vect, "res_par: ", res_par)
 
 test_PickeableResidual()
 
