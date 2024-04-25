@@ -1,3 +1,5 @@
 ./code_parallel/_pycache_
 *.npy
 *.csv
+__pycache__/
+*.pyc

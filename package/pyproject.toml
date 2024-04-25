@@ -24,7 +24,14 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
-dependencies = []
+dependencies = [
+  "numpy",
+  "pandas",
+  "emcee",
+  "cupy-cuda11x",
+  "deap",
+  "scipy",
+]
 
 [project.urls]
 Documentation = "https://github.com/CEA-MetroCarac/cdsaxs"

@@ -1,11 +1,9 @@
 import sys
 import os
 
-path = os.path.dirname("/nobackup/nd276333/Workspace/cdsaxs/package/")
-sys.path.append(path)
-
-import cdsaxs.package.src.cdsaxs.fitter as fitter
+import cdsaxs_fitting.fitter as fitter
 import numpy as np
+
 
 def test_cmaes(fitter_instance, params):
 

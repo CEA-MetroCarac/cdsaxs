@@ -1,11 +1,8 @@
 import sys
 import os
 
-path = os.path.dirname("/nobackup/nd276333/Workspace/cdsaxs/package/")
-sys.path.append(path)
-
-import src.Simulations.stacked_trapezoid_simulation as simulation
-import cdsaxs.package.src.cdsaxs.fitter as fitter
+import cdsaxs_fitting.simulations.stacked_trapezoid_simulation as simulation
+import cdsaxs_fitting.fitter as fitter
 import numpy as np
 import pytest
 
