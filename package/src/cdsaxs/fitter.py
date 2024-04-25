@@ -21,10 +21,37 @@ class Fitter:
         self.Simulation = Simulation
         self.exp_data = exp_data
         self.xp = Simulation.xp
+        self.best_fit_cmaes = None
+
+    def set_best_fit_cmaes(self, best_fit):
+        height = best_fit['heights']
+        langle = best_fit['langles']
+        rangle = best_fit.get('rangles', None)
+        weight = best_fit.get('weights', None)
+        y1 = best_fit['y1']
+        bot_cd = best_fit['bot_cd']
+        dwx = best_fit['dwx']
+        dwz = best_fit['dwz']
+        i0 = best_fit['i0']
+        bkg_cste = best_fit['bkg_cste']
+
+        if isinstance(y1, self.xp.ndarray):
+            if isinstance(rangle, self.xp.ndarray) and isinstance(weight, self.xp.ndarray):
+                best_fit_list = [ height[0], langle[0], rangle[0], y1[0], bot_cd[0], weight[0], dwx[0], dwz[0], i0[0], bkg_cste[0] ]
+            elif isinstance(rangle, self.xp.ndarray) and weight is None:
+                best_fit_list = [ height[0], langle[0], rangle[0], y1[0], bot_cd[0], dwx[0], dwz[0], i0[0], bkg_cste[0] ]
+            elif isinstance(weight, self.xp.ndarray) and rangle is None:
+                best_fit_list = [ height[0], langle[0], y1[0], bot_cd[0], weight[0], dwx[0], dwz[0], i0[0], bkg_cste[0] ]
+        elif isinstance(y1, float):
+            best_fit_list = [ height[0], langle[0], rangle[0], y1, bot_cd, dwx, dwz, i0, bkg_cste ]
+        
+
+
+        self.best_fit_cmaes = best_fit_list
 
     def cmaes(self, sigma, ngen,
             popsize, mu, n_default, restarts, tolhistfun, ftarget,
-            restart_from_best=True, verbose=True, dir_save=None):
+            restart_from_best=True, verbose=True, dir_save=None, test=False):
         """
         Modified from deap/algorithms.py to return population_list instead of
         final population and use additional termination criteria (algorithm
@@ -193,11 +220,19 @@ class Fitter:
         best_fitness = halloffame[0].fitness.values[0]
         best_corr = self.Simulation.TrapezoidGeometry.extract_params([best_uncorr], for_best_fit=True)
 
+        if best_corr:
+            #update best fit attribute
+            self.set_best_fit_cmaes(best_corr)
+
 
         if verbose:
             print(('best', best_uncorr, best_fitness))
         # make population dataframe, order of rows is first generation for all
         # children, then second generation for all children...
+        
+
+        if test:
+            return best_corr
         
         population_arr = self.xp.asarray(
             [list(individual) for generation in population_list for individual in
@@ -263,7 +298,7 @@ class Fitter:
         self.Simulation.set_from_fitter(True)
 
         #declare Fitness function and register
-        Residual = PicklableResidual(self.exp_data, fit_mode='mcmc', xp=np, Simulation=self.Simulation)
+        Residual = PicklableResidual(self.exp_data, fit_mode='mcmc', xp=np, Simulation=self.Simulation, best_fit=self.best_fit_cmaes)
 
 
         def do_verbose(Sampler):
@@ -334,10 +369,10 @@ class Fitter:
         best_index = np.argmin(flatfitness)
         best_fitness = flatfitness[best_index]
         best_uncorr = flatchain[best_index]
-        best_corr = self.Simulation.TrapezoidGeometry.extract_params(fitparams=[best_uncorr], for_best_fit=True)
+        best_corr = self.Simulation.TrapezoidGeometry.extract_params(fitparams=[best_uncorr], for_best_fit=True, best_fit=self.best_fit_cmaes)
       
         
-        population_array = self.Simulation.TrapezoidGeometry.extract_params(flatchain, for_saving=True)
+        population_array = self.Simulation.TrapezoidGeometry.extract_params(flatchain, for_saving=True, best_fit=self.best_fit_cmaes)
     
         if xp == cp:
             population_array = population_array.get()
@@ -374,7 +409,8 @@ class Fitter:
 
 
 
-# #######################################TESTING############################################
+#######################################TESTING############################################
+# from Simulations.stacked_trapezoid_simulation import StackedTrapezoidSimulation
 
 # pitch = 100 #nm distance between two trapezoidal bars
 # qzs = np.linspace(-0.1, 0.1, 20)
@@ -407,7 +443,7 @@ class Fitter:
 #             'bkg_cste': bkg
 #             }
 
-# Simulation1 = StackedTrapezoidSimulation(xp=cp, qys=qxs, qzs=qzs)
+# Simulation1 = StackedTrapezoidSimulation(use_gpu=False, qys=qxs, qzs=qzs)
 
 # intensity = Simulation1.simulate_diffraction(params=params)
 
@@ -422,9 +458,10 @@ class Fitter:
 #                     'bkg_cste': {'value': bkg, 'variation': 10E-5}
 #                     }
 
-# Simulation2 = StackedTrapezoidSimulation(xp=cp, qys=qxs, qzs=qzs, initial_guess=initial_params)
+# Simulation2 = StackedTrapezoidSimulation(use_gpu=False, qys=qxs, qzs=qzs, initial_guess=initial_params)
 
 # Fitter1 = Fitter(Simulation=Simulation2, exp_data=intensity)
 
-# # print(Fitter1.mcmc(N=9, sigma = np.asarray([100] * 9), nsteps=1000, nwalkers=100, test=True))
+
 # print(Fitter1.cmaes(sigma=100, ngen=100, popsize=20, mu=10, n_default=9, restarts=10, tolhistfun=10, ftarget=10, restart_from_best=True, verbose=False))
+# print(Fitter1.mcmc(N=9, sigma = np.asarray([100] * 9), nsteps=1000, nwalkers=100, test=True))

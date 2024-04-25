@@ -1,6 +1,6 @@
 import numpy as np
 import cupy as cp
-
+import copy
 
 class StackedTrapezoidSimulation:
 
@@ -12,7 +12,7 @@ class StackedTrapezoidSimulation:
         self.TrapezoidGeometry = StackedTrapezoidGeometry(xp=self.xp, from_fitter=self.from_fitter, initial_guess=initial_guess)
         self.TrapezoidDiffraction = StackedTrapezoidDiffraction(TrapezoidGeometry=self.TrapezoidGeometry, xp=self.xp)
 
-    def simulate_diffraction(self, params=None, fitparams=None):
+    def simulate_diffraction(self, params=None, fitparams=None, fit_mode='cmaes', best_fit=None):
         """
         Simulate the diffraction pattern of the stacked trapezoids
         @param
@@ -22,7 +22,13 @@ class StackedTrapezoidSimulation:
         corrected_intensity: a 2d array of floats containing the corrected intensity the innerlists corresponds to the simulated intensity obtained by varying the parameters using Fitter Class
         """
 
-        corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, params=params, fitparams=fitparams)
+        #deep copy of the params dictionary to avoid modifying the original dictionary
+        params_deepcopy = copy.deepcopy(params)
+
+        if fit_mode == 'cmaes':
+            corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, params=params_deepcopy, fitparams=fitparams, fit_mode=fit_mode)
+        elif fit_mode == 'mcmc':
+            corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, params=params_deepcopy, fitparams=fitparams, fit_mode=fit_mode, best_fit=best_fit)
 
         if not self.from_fitter:
             return corrected_intensity[0]
@@ -30,6 +36,9 @@ class StackedTrapezoidSimulation:
         return corrected_intensity
 
     def set_from_fitter(self, from_fitter):
+
+        """ When the simulation is called from the fitter, set the from_fitter attribute to True and set the values of variations and initial guess accordingly"""
+
         self.from_fitter = from_fitter
         self.TrapezoidGeometry.from_fitter = from_fitter
         self.TrapezoidGeometry.set_variations()
@@ -361,7 +370,7 @@ class StackedTrapezoidGeometry:
 
         return None
 
-    def extract_params(self, fitparams=None, params=None, for_best_fit=False, for_saving=False):
+    def extract_params(self, fitparams=None, params=None, for_best_fit=False, for_saving=False, best_fit=None, fit_mode='cmaes'):
 
         """
         Extract the relevant values from the fitparams to calculate the form factor
@@ -395,9 +404,12 @@ class StackedTrapezoidGeometry:
             #fitparams coming from fitter is an array, so pick the right values and put them in right variables
             fitparams = self.xp.asarray(fitparams)
             
-            fitparams = fitparams * self.variations + self.initial_guess_values #make sure fitparams values make sense
+            if best_fit is None and fit_mode == 'cmaes':
+                fitparams = fitparams * self.variations + self.initial_guess_values #make sure fitparams values make physical sense
+            else:
+                fitparams = fitparams * self.variations + best_fit #for the mcmc case where the best fit obtain from cmaes is used
 
-            #get the indices to assign relevant values from fit_params
+            #get the indices to assign relevant values from fit_params which is an array
             if self.fitparams_indices is None:
                 self.set_fitparams_indices()
             
@@ -447,10 +459,6 @@ class StackedTrapezoidGeometry:
         if weight and not isinstance(weight, self.xp.ndarray):
             weight = self.xp.asarray(weight)
 
-        if for_best_fit:
-            return {'heights': height[0], 'langles': langle[0], 'rangles': rangle[0] if rangle else None, 'y1': y1_initial, 'bot_cd': y2_initial, 'dwx': dwx, 'dwz': dwz, 'i0': i0, 'bkg_cste': bkg_cste}
-
-
         #check if the values make physical sense
         height = self.xp.where(height < 0, self.xp.nan , height)
         langle = self.xp.where( (langle < 0) | (langle[:,] > 91) , self.xp.nan , langle)
@@ -463,7 +471,7 @@ class StackedTrapezoidGeometry:
         condition_y2 = self.xp.asarray(y2_initial < 0) | (y2_initial < y1_initial)
         y2_initial = self.xp.where(condition_y2 < 0, self.xp.nan , y2_initial)
 
-        condition_dwx = self.xp.asarray(dwx < 0)
+        condition_dwx = self.xp.asarray(dwx < 0) #the mask are converted to relevant cupy (or numpy) arrays to avoid error
         dwx = self.xp.where(condition_dwx < 0, self.xp.nan , dwx)
 
         condition_dwz = self.xp.asarray(dwz < 0)
@@ -475,8 +483,12 @@ class StackedTrapezoidGeometry:
         condition_bkg_cste = self.xp.asarray(bkg_cste < 0)
         bkg_cste = self.xp.where(condition_bkg_cste < 0, self.xp.nan , bkg_cste)
 
+        if for_best_fit:
+            return {'heights': height[0], 'langles': langle[0], 'rangles': rangle[0] if isinstance(rangle, self.xp.ndarray) else None, 'y1': y1_initial, 'bot_cd': y2_initial, 'dwx': dwx, 'dwz': dwz, 'i0': i0, 'bkg_cste': bkg_cste}
+
+
         if for_saving:
-            #bundle the values of same generation together in a list
+            #bundle the parameter values of same population together in a list
             population_array  = []
             for i in range(self.xp.shape(height)[0]):
                 if weight is None and rangle is None:
@@ -616,7 +628,7 @@ class StackedTrapezoidDiffraction():
         return form_factor
 
     
-    def correct_form_factor_intensity(self, qys, qzs, params=None, fitparams=None):
+    def correct_form_factor_intensity(self, qys, qzs, params=None, fitparams=None, fit_mode='cmaes', best_fit=None):
         """
         Calculate the intensites using form factor and apply debye waller corrections
 
@@ -628,7 +640,11 @@ class StackedTrapezoidDiffraction():
 
         #Extract the parameters
         if fitparams is not None and self.TrapezoidGeometry.from_fitter:
-            height, langle, rangle, y1_initial, y2_initial, weight, dwx, dwz, i0, bkg_cste = self.TrapezoidGeometry.extract_params(fitparams=fitparams)
+            if fit_mode == 'cmaes':
+                height, langle, rangle, y1_initial, y2_initial, weight, dwx, dwz, i0, bkg_cste = self.TrapezoidGeometry.extract_params(fitparams=fitparams, fit_mode=fit_mode)
+            elif fit_mode == 'mcmc':
+                height, langle, rangle, y1_initial, y2_initial, weight, dwx, dwz, i0, bkg_cste = self.TrapezoidGeometry.extract_params(fitparams=fitparams, fit_mode=fit_mode, best_fit=best_fit)
+
         elif params is not None:
             height, langle, rangle, y1_initial, y2_initial, weight, dwx, dwz, i0, bkg_cste = self.TrapezoidGeometry.extract_params(params=params)
         else:

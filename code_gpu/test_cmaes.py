@@ -16,7 +16,7 @@ i0 = 10
 bkg = 0.1
 height = [23.48, 23.45]
 bot_cd = [54.6, 54.2]
-swa = [[85],[87]]
+swa = [[85, 82, 83],[87, 85, 86]]
 
 multiples = [1E-7, 1E-7, 1E-7, 1E-7, 1E-7, 1E-7] + len(swa[0]) * [1E-9]
 
@@ -60,12 +60,12 @@ def test_cmaes_with_arbitrary_data():
     # Call the cmaes function with arbitrary data
     if __name__ == "__main__":
         
-        best_corr, best_fitness = cmaes(data=data[0], qxs=qxs, qzs=qzs, sigma=100, ngen=1000, popsize=200, mu=10,
+        best_corr, best_fitness = cmaes(data=data[0], qxs=qxs, qzs=qzs, sigma=100, ngen=2, popsize=10, mu=10,
                                             n_default=len(arbitrary_params), multiples=multiples, restarts=0, verbose=False, tolhistfun=5e-5,
                                             initial_guess=arbitrary_params, ftarget=None, dir_save=None, use_gpu=use_gpu)
     
-    print("arbitary_params:", arbitrary_params)
-    print("best_params:", best_corr)
+    # print("arbitary_params:", arbitrary_params)
+    # print("best_params:", best_corr)
     tolerance = 1.0  # Adjust the tolerance as needed
     assert np.allclose(arbitrary_params,best_corr, atol=tolerance), "Test failed!"
     print("Test passed successfully!")

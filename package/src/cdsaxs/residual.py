@@ -10,7 +10,7 @@ class PicklableResidual:
     simulated data.
     """
 
-    def __init__(self, data, fit_mode='cmaes', xp=np, Simulation=None, c=1e-5):
+    def __init__(self, data, fit_mode='cmaes', xp=np, Simulation=None, c=1e-5, best_fit=None):
         """
         Parameters
         ----------
@@ -32,6 +32,7 @@ class PicklableResidual:
         self.xp = xp
         self.Simulation = Simulation
         self.c = c
+        self.best_fit = best_fit
 
 
     def __call__(self, fit_params):
@@ -49,8 +50,10 @@ class PicklableResidual:
         """
         if not isinstance(fit_params, self.xp.ndarray):
             fit_params = self.xp.array(fit_params)
-        if fit_params is not None:
-            qxfit = self.Simulation.simulate_diffraction(fitparams=fit_params)
+        if fit_params is not None and self.best_fit is not None:
+            qxfit = self.Simulation.simulate_diffraction(fitparams=fit_params, fit_mode=self.mfit_mode, best_fit=self.best_fit)
+        elif fit_params is not None:
+            qxfit = self.Simulation.simulate_diffraction(fitparams=fit_params, fit_mode=self.mfit_mode)
 
         res = self.log_error(self.mdata, qxfit)
         
@@ -92,7 +95,7 @@ class PicklableResidual:
         error = self.xp.nansum(self.xp.abs((self.xp.log10(exp_i_array) - self.xp.log10(sim_i_array))), axis=1)
 
         #this is for normalization but we don't get the same results as the original code
-        # error /= xp.count_nonzero(~xp.isnan(exp_i_array), axis=1)
+        # error /= self.xp.count_nonzero(~self.xp.isnan(exp_i_array), axis=1)
 
         #replace the error of the population with inf if all the parameters are nan
         error = self.xp.where(self.xp.all(self.xp.isnan(sim_i_array), axis=1), self.xp.inf, error)
