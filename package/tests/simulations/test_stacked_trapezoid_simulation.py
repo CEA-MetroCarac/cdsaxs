@@ -1,7 +1,7 @@
 import sys
 import os
 
-import cdsaxs_fitting.simulations.stacked_trapezoid_simulation as simulation
+import cdsaxs_fitting.simulations.stacked_trapezoid as simulation
 import numpy as np
 import pytest
 
