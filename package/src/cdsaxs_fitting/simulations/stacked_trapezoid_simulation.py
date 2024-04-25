@@ -1,8 +1,10 @@
 import numpy as np
 import cupy as cp
 import copy
+from .base import Simulation, Geometry
 
-class StackedTrapezoidSimulation:
+
+class StackedTrapezoidSimulation(Simulation):
 
     def __init__(self, qys, qzs, from_fitter=False, use_gpu=False, initial_guess=None):
         self.qys = qys
@@ -44,8 +46,12 @@ class StackedTrapezoidSimulation:
         self.TrapezoidGeometry.set_variations()
         self.TrapezoidGeometry.set_initial_guess_values()
 
+    @property
+    def geometry(self):
+        return self.TrapezoidGeometry
 
-class StackedTrapezoidGeometry:
+
+class StackedTrapezoidGeometry(Geometry):
 
     def __init__(self, xp=np, from_fitter=False, initial_guess=None):
         
@@ -503,6 +509,7 @@ class StackedTrapezoidGeometry:
             return self.xp.asarray(population_array)
 
         return height, langle, rangle, y1_initial, y2_initial, weight, dwx, dwz, i0, bkg_cste
+
 
 class StackedTrapezoidDiffraction():
     

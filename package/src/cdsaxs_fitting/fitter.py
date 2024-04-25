@@ -1,5 +1,6 @@
 from .residual import PicklableResidual
 import os
+from typing import TYPE_CHECKING
 from collections import deque
 import numpy as np
 import cupy as cp
@@ -11,13 +12,16 @@ from scipy import stats
 import emcee
 import sys
 
+if TYPE_CHECKING:
+    from .simulations.base import Simulation
+
 creator.create('FitnessMin', dbase.Fitness, weights=(-1.,))  # to minim. fitness
 creator.create('Individual', list, fitness=creator.FitnessMin)
 
 
 class Fitter:
     
-    def __init__(self, Simulation, exp_data):
+    def __init__(self, Simulation: 'Simulation', exp_data):
         self.Simulation = Simulation
         self.exp_data = exp_data
         self.xp = Simulation.xp
@@ -218,7 +222,7 @@ class Fitter:
 
         best_uncorr = halloffame[0]  # np.abs(halloffame[0])
         best_fitness = halloffame[0].fitness.values[0]
-        best_corr = self.Simulation.TrapezoidGeometry.extract_params([best_uncorr], for_best_fit=True)
+        best_corr = self.Simulation.geometry.extract_params([best_uncorr], for_best_fit=True)
 
         if best_corr:
             #update best fit attribute
@@ -238,7 +242,7 @@ class Fitter:
             [list(individual) for generation in population_list for individual in
             generation])
         
-        population_arr = self.Simulation.TrapezoidGeometry.extract_params(population_arr, for_saving=True)
+        population_arr = self.Simulation.geometry.extract_params(population_arr, for_saving=True)
 
 
         fitness_arr = self.xp.asarray(
@@ -262,7 +266,6 @@ class Fitter:
 
         return best_corr, best_fitness
     
-
     def mcmc(self, N, sigma, nsteps, nwalkers, gaussian_move=False, seed=None, verbose=False, test=True):
         """
         Fit data using the emcee package's implementation of the MCMC algorithm.
@@ -369,10 +372,10 @@ class Fitter:
         best_index = np.argmin(flatfitness)
         best_fitness = flatfitness[best_index]
         best_uncorr = flatchain[best_index]
-        best_corr = self.Simulation.TrapezoidGeometry.extract_params(fitparams=[best_uncorr], for_best_fit=True, best_fit=self.best_fit_cmaes)
+        best_corr = self.Simulation.geometry.extract_params(fitparams=[best_uncorr], for_best_fit=True, best_fit=self.best_fit_cmaes)
       
         
-        population_array = self.Simulation.TrapezoidGeometry.extract_params(flatchain, for_saving=True, best_fit=self.best_fit_cmaes)
+        population_array = self.Simulation.geometry.extract_params(flatchain, for_saving=True, best_fit=self.best_fit_cmaes)
     
         if xp == cp:
             population_array = population_array.get()
