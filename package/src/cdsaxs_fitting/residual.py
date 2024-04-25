@@ -2,6 +2,10 @@ import numpy as np
 import cupy as cp
 import os
 
+from typing import TYPE_CHECKING, Optional
+if TYPE_CHECKING:
+    from .simulations.base import Simulation
+
 
 
 class PicklableResidual:
@@ -10,7 +14,7 @@ class PicklableResidual:
     simulated data.
     """
 
-    def __init__(self, data, fit_mode='cmaes', xp=np, Simulation=None, c=1e-5, best_fit=None):
+    def __init__(self, data, fit_mode='cmaes', xp=np, Simulation: Optional['Simulation'] = None, c=1e-5, best_fit=None):
         """
         Parameters
         ----------

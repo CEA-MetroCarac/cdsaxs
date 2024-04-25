@@ -15,3 +15,8 @@ class Simulation(Protocol):
 
     def set_from_fitter(self, from_fitter):
         ...
+
+    def simulate_diffraction(
+        self, params=None, fitparams=None, fit_mode='cmaes', best_fit=None
+    ):
+        ...
