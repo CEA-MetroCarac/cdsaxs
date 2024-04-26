@@ -1,6 +1,3 @@
-import sys
-import os
-
 import cdsaxs_fitting.fitter as fitter
 import numpy as np
 

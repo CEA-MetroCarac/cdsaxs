@@ -1,4 +1,4 @@
-from .residual import PicklableResidual
+from .residual import Residual
 import os
 from typing import TYPE_CHECKING
 from collections import deque
@@ -105,8 +105,8 @@ class Fitter:
         self.Simulation.set_from_fitter(True)
 
         #declare Fitness function and register
-        Residual = PicklableResidual(self.exp_data, fit_mode='cmaes', xp=np, Simulation=self.Simulation)
-        toolbox.register('evaluate', Residual)
+        residual = Residual(self.exp_data, fit_mode='cmaes', xp=self.xp, Simulation=self.Simulation)
+        toolbox.register('evaluate', residual)
         
 
         halloffame = tools.HallOfFame(1)
@@ -301,7 +301,7 @@ class Fitter:
         self.Simulation.set_from_fitter(True)
 
         #declare Fitness function and register
-        Residual = PicklableResidual(self.exp_data, fit_mode='mcmc', xp=np, Simulation=self.Simulation, best_fit=self.best_fit_cmaes)
+        residual = Residual(self.exp_data, fit_mode='mcmc', xp=self.xp, Simulation=self.Simulation, best_fit=self.best_fit_cmaes)
 
 
         def do_verbose(Sampler):
@@ -312,7 +312,7 @@ class Fitter:
             sys.stdout.flush()
         
         # Empirical factor to modify MCMC acceptance rate
-        c = Residual.c
+        c = residual.c
         
         # Generate a random seed if none is provided
         if seed is None:
@@ -336,7 +336,7 @@ class Fitter:
             # Use Gaussian move for the proposal distribution
             individuals = [np.random.uniform(-100, 100, N) for _ in range(nwalkers)]
             
-            Sampler = emcee.EnsembleSampler(nwalkers, N, Residual, moves=emcee.moves.GaussianMove(sigma), pool=None, vectorize=True)
+            Sampler = emcee.EnsembleSampler(nwalkers, N, residual, moves=emcee.moves.GaussianMove(sigma), pool=None, vectorize=True)
 
             Sampler.run_mcmc(individuals, nsteps, progress=True)
 
@@ -345,7 +345,7 @@ class Fitter:
         else:
 
             individuals = [np.random.default_rng().normal(loc=0, scale=sigma, size=sigma.shape) for _ in range(nwalkers)]
-            Sampler = emcee.EnsembleSampler(nwalkers, N, Residual, pool=None, vectorize=True)
+            Sampler = emcee.EnsembleSampler(nwalkers, N, residual, pool=None, vectorize=True)
                 
             Sampler.run_mcmc(individuals, nsteps, progress=True)
 

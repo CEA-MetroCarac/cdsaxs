@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 
-class PicklableResidual:
+class Residual:
     """
     Class to calculate the residual between the experimental data and the
     simulated data.
