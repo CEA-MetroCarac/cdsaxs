@@ -28,7 +28,7 @@ dependencies = [
   "numpy",
   "pandas",
   "emcee",
-  "cupy",
+  "cupy-cuda11x",
   "deap",
   "scipy",
 ]

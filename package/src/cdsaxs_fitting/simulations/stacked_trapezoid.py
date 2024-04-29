@@ -1,10 +1,11 @@
 import copy
 from .base import Simulation, Geometry
-
+import numpy as np
 try:
     import cupy as cp
+    CUDA_AVAILABLE = True
 except:
-    import numpy as np
+    CUDA_AVAILABLE = False
 
 
 
@@ -665,18 +666,22 @@ class StackedTrapezoidDiffraction():
         if rangle is None:
             rangle = langle
 
-        if self.xp == cp:
-            height = cp.asarray(height)
-            langle = cp.asarray(langle)
-            rangle = cp.asarray(rangle)
-            y1_initial = cp.asarray(y1_initial)
-            y2_initial = cp.asarray(y2_initial)
-            dwx = cp.asarray(dwx)
-            dwz = cp.asarray(dwz)
-            i0 = cp.asarray(i0)
-            bkg_cste = cp.asarray(bkg_cste)
-            qys = cp.asarray(qys)
-            qzs = cp.asarray(qzs)
+        try:
+            if CUDA_AVAILABLE and self.xp == cp:
+                height = self.xp.asarray(height)
+                langle = self.xp.asarray(langle)
+                rangle = self.xp.asarray(rangle)
+                y1_initial = self.xp.asarray(y1_initial)
+                y2_initial = self.xp.asarray(y2_initial)
+                dwx = self.xp.asarray(dwx)
+                dwz = self.xp.asarray(dwz)
+                i0 =self.xp.asarray(i0)
+                bkg_cste = self.xp.asarray(bkg_cste)
+                qys = self.xp.asarray(qys)
+                qzs = self.xp.asarray(qzs)
+        except:
+            pass
+        
         
         #Actual Calculations
 

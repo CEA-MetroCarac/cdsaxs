@@ -9,11 +9,12 @@ from deap import creator, tools, cma
 from scipy import stats
 import emcee
 import sys
+import numpy as np
 
 try:
     import cupy as cp
 except:
-    import numpy as np
+    pass
 
 
 if TYPE_CHECKING:
@@ -254,9 +255,12 @@ class Fitter:
             individual in generation])
         
         # convert to numpy arrays if using GPU
-        if xp == cp:
-            population_arr = population_arr.get()
-            fitness_arr = fitness_arr.get()
+        try:
+            if xp == cp:
+                population_arr = population_arr.get()
+                fitness_arr = fitness_arr.get()
+        except:
+            pass
 
         if dir_save is not None:
             # create a new method to save the population and fitness arrays
@@ -333,8 +337,11 @@ class Fitter:
 
         sigma = xp.array(sigma)
 
-        if isinstance(sigma, cp.ndarray):
-            sigma = sigma.get()
+        try:
+            if isinstance(sigma, cp.ndarray):
+                sigma = sigma.get()
+        except:
+            pass
 
         if gaussian_move:
             # Use Gaussian move for the proposal distribution
@@ -380,9 +387,12 @@ class Fitter:
       
         
         population_array = self.Simulation.geometry.extract_params(flatchain, for_saving=True, best_fit=self.best_fit_cmaes)
-    
-        if xp == cp:
-            population_array = population_array.get()
+
+        try:
+            if xp == cp:
+                population_array = population_array.get()
+        except:
+            pass
 
         # create a new method to save the population and fitness arrays
         population_with_fitness = np.asarray([np.append(population_array[i], flatfitness[i]) for i in range(len(population_array))])

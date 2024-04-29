@@ -1,9 +1,10 @@
 import os
+import numpy as np
 
 try:
     import cupy as cp
 except:
-    import numpy as np
+    pass
 
 from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
@@ -64,8 +65,11 @@ class Residual:
 
         res = self.log_error(self.mdata, qxfit)
         
-        if self.xp == cp:
-            res = res.get()
+        try:
+            if self.xp == cp:
+                res = res.get()
+        except:
+            pass
 
         if self.mfit_mode == 'cmaes':
             return res
