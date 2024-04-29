@@ -1,0 +1,99 @@
+---
+title: "UML for cdsaxs package"
+---
+
+classDiagram
+   direction 
+
+   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% For Fitter %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    class Fitter {
+        + Simulation: Simulation
+        + exp_data: array
+        + xp: package
+        + best_fit_cmaes: array
+        -set_best_fit_cmaes(): void
+        +cmaes(): array
+        +mcmc(): array
+    }
+
+    class Residual {
+        + mdata: array
+        +mfit_mode: string
+        +xp: package
+        +Simulation: Simulation
+        -c: float
+        -best_fit: array
+        +call(): array
+        +log_error(): array
+        +fix_fitness_mcmc(): array
+    }
+   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% For Fitter %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% For Simulation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+
+    class Simulation {
+        <<interface>>
+        + geometry: Geometry
+        set_from_fitter(): void
+        simulate_diffraction(): array
+    }
+
+    class Geometry {
+        <<interface>>
+        extract_params(): tuple
+    }
+
+  namespace StackedTrapezoidModel {
+
+    class StackedTrapezoidDiffraction {
+        + xp: package
+        + TrapezoidGeometry: StackedTrapezoidGeometry
+        calculate_coefficients(): array
+        trapezoid_form_factor(): array
+        corrections_dwi0bk(): array
+        calculate_form_factor(): array
+        correct_form_factor_intensity(): array
+    }
+
+    class StackedTrapezoidSimulation {
+        + qys: array
+        + qzs: array
+        + xp : package
+        + from_fitter : boolean
+        + TrapezoidGeometry : StackedTrapezoidGeometry
+        + TrapezoidDiffraction : StackedTrapezoidDiffraction
+        simulate_diffraction(): array
+        set_from_fitter(): void
+    }
+    
+    class StackedTrapezoidGeometry {
+        + xp: package
+        +from_fitter: boolean
+        +initial_guess: dict
+        -fit_params_indices: array
+        -variations: dict
+        -initial_guess_values: array
+        set_variations(): void
+        set_initial_guess_values(): void
+        set_fitparams_indices(): void
+        calculate_ycoords(): tuple
+        calculate_shifts(): array
+        check_params(): void
+        extract_params(): tuple
+    }
+
+  }
+
+    StackedTrapezoidSimulation *-- StackedTrapezoidGeometry: composition
+    StackedTrapezoidSimulation *-- StackedTrapezoidDiffraction: composition
+    Geometry <|-- StackedTrapezoidGeometry: inheritance
+    Simulation <|-- StackedTrapezoidSimulation: inheritance
+
+
+
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% For Simulation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    Geometry <-- Fitter : extract_params
+    Residual <-- Fitter : call
+    Simulation <-- Residual : simulate_diffraction

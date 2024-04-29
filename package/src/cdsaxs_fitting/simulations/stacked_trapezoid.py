@@ -1,7 +1,11 @@
-import numpy as np
-import cupy as cp
 import copy
 from .base import Simulation, Geometry
+
+try:
+    import cupy as cp
+except:
+    import numpy as np
+
 
 
 class StackedTrapezoidSimulation(Simulation):

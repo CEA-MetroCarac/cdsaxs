@@ -2,8 +2,6 @@ from .residual import Residual
 import os
 from typing import TYPE_CHECKING
 from collections import deque
-import numpy as np
-import cupy as cp
 import pandas as pd
 from random import randrange
 import deap.base as dbase
@@ -11,6 +9,12 @@ from deap import creator, tools, cma
 from scipy import stats
 import emcee
 import sys
+
+try:
+    import cupy as cp
+except:
+    import numpy as np
+
 
 if TYPE_CHECKING:
     from .simulations.base import Simulation

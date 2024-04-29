@@ -1,6 +1,9 @@
-import numpy as np
-import cupy as cp
 import os
+
+try:
+    import cupy as cp
+except:
+    import numpy as np
 
 from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
