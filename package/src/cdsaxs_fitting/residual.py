@@ -14,27 +14,46 @@ if TYPE_CHECKING:
 
 class Residual:
     """
-    Class to calculate the residual between the experimental data and the
-    simulated data.
+    A class to calculate the residual between experimental and simulated data, used for fitness evaluation in optimization algorithms.
+
+    Attributes:
+        mdata : numpy.ndarray
+            Experimental intensity data.
+        mfit_mode : str
+            Method to calculate fitness, differentiating between 'cmaes' and 'mcmc'.
+        xp : module
+            NumPy or CuPy module.
+        Simulation : Optional['Simulation']
+            Class to simulate the diffraction pattern (for now only StackedTrapezoidSimulation).
+        c : float
+            Empirical factor to modify the MCMC acceptance rate.
+        best_fit : list or None
+            List containing the best fit parameters obtained from the optimization algorithm (optional).
+
+    Methods:
+        __call__: Calculate the residual between experimental and simulated data.
+        log_error: Return the difference between experimental and simulated data using the log error.
+        fix_fitness_mcmc: Fix the fitness for the MCMC algorithm using the Metropolis-Hastings criterion.
     """
 
     def __init__(self, data, fit_mode='cmaes', xp=np, Simulation: Optional['Simulation'] = None, c=1e-5, best_fit=None):
         """
-        Parameters
-        ----------
-        data, qxs, qzs: np.arrays of floats
-            List of experimental intensity data and qx, qz at which the form factor has to be simulated
-        fit_mode: string
-            Method to calculate the fitness, which is different between cmaes
-            and mcmc
-        xp: module
-            Numpy or cupy
-        Simulation: class
-            Class to simulate the diffraction pattern (for now only StackedTrapezoidSimulation)
-        c: float
-            Empirical factor to modify mcmc acceptance rate, makes printed fitness different than actual,
-            higher c increases acceptance rate
+
+        Parameters:
+            data : numpy.ndarray
+                Experimental intensity data.
+            fit_mode : str, optional
+                Method to calculate fitness, differentiating between 'cmaes' and 'mcmc'. Default is 'cmaes'.
+            xp : module, optional
+                NumPy or CuPy module. Default is numpy.
+            Simulation : Optional['Simulation'], optional
+                Class to simulate the diffraction pattern (for now only StackedTrapezoidSimulation). Default is None.
+            c : float, optional
+                Empirical factor to modify the MCMC acceptance rate. Default is 1e-5.
+            best_fit : list or None, optional
+                List containing the best fit parameters obtained from the optimization algorithm. Default is None.
         """
+
         self.mdata = data
         self.mfit_mode = fit_mode
         self.xp = xp
@@ -45,16 +64,15 @@ class Residual:
 
     def __call__(self, fit_params):
         """
-        Parameters
-        ----------
-        fit_params: numpy or cupy arrays of arrays of parametres of floats
-            List of all the parameters value returned by CMAES/MCMC (list of
-            Debye-Waller, I0, noise level, height, linewidth, [angles......])
-            (not be given by the user if test=False, unexpected behavior occurs if not obtained from Fitter class)
+        Calculate the residual between experimental and simulated data.
 
-        Returns
-        -------
+        Parameters:
+            fit_params : numpy.ndarray
+                List of all parameter values returned by the optimization algorithm (list of Debye-Waller, I0, noise level, height, linewidth, [angles...]).
 
+        Returns:
+            numpy.ndarray or float
+                Residual value(s) between experimental and simulated data.
         """
         if not isinstance(fit_params, self.xp.ndarray):
             fit_params = self.xp.array(fit_params)
@@ -95,8 +113,9 @@ class Residual:
 
         Returns
         -------
-        error: float
-            Sum of difference of log data, normalized by the number of data
+        Returns:
+            numpy.ndarray
+                Difference between experimental and simulated data using the log error.
         """
         exp_i_array = self.xp.where(exp_i_array < 0, self.xp.nan, exp_i_array)
         
@@ -120,6 +139,14 @@ class Residual:
         for our case we assume that probability of our parameters being the best is proportional to a Gaussian centered at fitness=0
         where fitness can be log, abs, squared error, etc.
         emcee expects the fitness function to return ln(P(new)), P(old) is auto-calculated
+
+        Parameters:
+            fitness : float
+                Fitness value to be fixed.
+
+        Returns:
+            float
+                Fixed fitness value.
         """
         # empirical factor to modify mcmc acceptance rate, makes printed fitness different than actual, higher c increases acceptance rate
         return -fitness / self.c

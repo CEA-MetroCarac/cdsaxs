@@ -1,20 +1,21 @@
-from .residual import Residual
+import sys
 import os
 from typing import TYPE_CHECKING
 from collections import deque
-import pandas as pd
 from random import randrange
 import deap.base as dbase
 from deap import creator, tools, cma
 from scipy import stats
 import emcee
-import sys
-import numpy as np
 
+import numpy as np
+import pandas as pd
 try:
     import cupy as cp
 except:
     pass
+
+from .residual import Residual
 
 
 if TYPE_CHECKING:
@@ -25,14 +26,56 @@ creator.create('Individual', list, fitness=creator.FitnessMin)
 
 
 class Fitter:
+    """
+    This class is designed to fit the cdsaxs experimental data using the CMA-ES (Covariance Matrix Adaptation Evolution Strategy) and then do a statstical analysis
+    of the best fit parameters using the MCMC (Markov Chain Monte Carlo) algorithm. It takes an instance of the Simulation class and fits this simulated data to the
+    experimental data. 
+
+    Attributes:
+        Simulation (Simulation): An instance of the Simulation class representing the simulated diffraction pattern.
+        exp_data (numpy.ndarray): Experimental diffraction data.
+        xp (module): NumPy or CuPy module, depending on whether GPU acceleration is used.
+        best_fit_cmaes (list or None): List containing the best fit parameters obtained using the CMA-ES algorithm.
+
+    Methods:
+        cmaes: Perform fitting using the CMA-ES (Covariance Matrix Adaptation Evolution Strategy) algorithm.
+        mcmc: Give a set of statstical data on the best fit parameters using the MCMC (Markov Chain Monte Carlo) algorithm.
+
+    """
     
     def __init__(self, Simulation: 'Simulation', exp_data):
+        """
+        Initialize the Fitter class with the Simulation instance and experimental data.
+        
+        Parameters
+        ----------
+        Simulation : Simulation
+            An instance of the Simulation class representing the simulated diffraction pattern.
+        exp_data : numpy.ndarray    
+            Experimental diffraction data.
+        
+        Returns
+        -------
+            None
+        """
         self.Simulation = Simulation
         self.exp_data = exp_data
         self.xp = Simulation.xp
         self.best_fit_cmaes = None
-
+        
     def set_best_fit_cmaes(self, best_fit):
+        """
+        Set the best fit parameters obtained using the CMA-ES algorithm.
+
+        Parameters
+        ----------
+        best_fit : dict
+            Dictionary containing the best fit parameters obtained using the CMA-ES algorithm.
+
+        Returns
+        -------
+            None
+        """
         height = best_fit['heights']
         langle = best_fit['langles']
         rangle = best_fit.get('rangles', None)
@@ -62,35 +105,50 @@ class Fitter:
             popsize, mu, n_default, restarts, tolhistfun, ftarget,
             restart_from_best=True, verbose=True, dir_save=None, test=False):
         """
-        Modified from deap/algorithms.py to return population_list instead of
-        final population and use additional termination criteria (algorithm
-        neuromorphic)
-        Function extracted from XiCam (modified)
+        Fit experimental data using the Covariance Matrix Adaptation Evolution Strategy (CMA-ES) algorithm.
+
+        This method utilizes a modified version of the CMA-ES algorithm to fit experimental data.
 
         Parameters
         ----------
-        sigma: float
-            Initial standard deviation for each parameter.
-        ngen: int
-            Number of generations.
-        popsize: int
-            Population size.
-        mu: int
-            Number of parents/points for recombination.
-        n_default: int
-            Number of parameters.
-        restarts: int
-            Number of restarts.
-        tolhistfun: float
-            Tolerance for the history of the best fitness value.
-        ftarget: float
-            Target fitness value.
-        restart_from_best: bool
-            Restart from the best individual.
-        verbose: bool
-            Print progress information.
-        dir_save: str
-            Directory to save the output.
+        sigma : float
+            The initial standard deviation for each parameter.
+        ngen : int
+            The number of generations to run the algorithm.
+        popsize : int
+            The size of the population (number of candidate solutions) in each generation.
+        mu : int
+            The number of parents/points for recombination.
+        n_default : int
+            The number of parameters to be optimized.
+        restarts : int
+            The number of restarts allowed during the optimization process.
+        tolhistfun : float
+            The tolerance for the history of the best fitness value.
+        ftarget : float
+            The target fitness value.
+        restart_from_best : bool, optional
+            Determines whether to restart from the best individual found so far. Default is True.
+        verbose : bool, optional
+            Controls whether to print progress information during optimization. Default is True.
+        dir_save : str, optional
+            The directory to save the output. Default is None.
+        test : bool, optional
+            Controls whether to test the function and return best value instead of performing the full optimization process. If True, the function returns best value. Default is False.
+
+        Returns
+        -------
+            tuple: A tuple containing the best fit parameters and the corresponding fitness value.
+
+        Attributes
+        ----------
+        best_fit_cmaes : list or None
+            List containing the best fit parameters obtained using the CMA-ES algorithm.
+
+        Notes
+        -----
+        This method is modified from deap/algorithms.py to return a list of populations instead of the final population and to incorporate additional termination criteria based on neuromorphic algorithms. The function was originally extracted from XiCam and has been modified for specific use cases.
+
         """
 
         #cupy or numpy
@@ -231,7 +289,7 @@ class Fitter:
 
         if best_corr:
             #update best fit attribute
-            self.set_best_fit_cmaes(best_corr)
+            self.set_best_fit_cmaes(best_fit=best_corr)
 
 
         if verbose:
@@ -276,31 +334,29 @@ class Fitter:
     
     def mcmc(self, N, sigma, nsteps, nwalkers, gaussian_move=False, seed=None, verbose=False, test=True):
         """
-        Fit data using the emcee package's implementation of the MCMC algorithm.
+        Generate a set of statstical data on the best fit parameters using the MCMC (Markov Chain Monte Carlo) algorithm.
+
+        This method utilizes the emcee package's implementation of the MCMC algorithm and generates a csv file with the statistical data of the best fit parameters.
 
         Args:
-            data (numpy.ndarray): Experimental data.
-            qxs (numpy.ndarray): Q-values for x-direction.
-            qzs (numpy.ndarray): Q-values for z-direction.
-            initial_guess (numpy.ndarray): Initial parameter guess.
-            N (int): Number of parameters.
-            sigma (float or list): Initial standard deviation for each parameter.
-            nsteps (int): Number of MCMC steps.
-            nwalkers (int): Number of MCMC walkers.
-            gaussian_move (bool, optional): Use Metropolis-Hastings gaussian proposal. Default is strech move.
-            parallel (bool or int or str, optional): Set the parallel processing mode. Default is True.
-            seed (int, optional): Seed for the random number generator.
-            verbose (bool, optional): Print progress information. Default is True.
-            test (bool, optional): Test the function and return the mean values. Default is False.
-        
+            N (int): The number of parameters to be optimized.
+            sigma (float or list): The initial standard deviation for each parameter. If a float is provided, it is applied to all parameters. If a list is provided, each parameter is initialized with the corresponding value.
+            nsteps (int): The number of MCMC steps to perform.
+            nwalkers (int): The number of MCMC walkers to use.
+            gaussian_move (bool, optional): Determines whether to use Gaussian moves for proposal distribution. If True, Gaussian moves are used. If False, stretch moves are used. Default is False.
+            seed (int, optional): The seed for the random number generator. If None, a random seed is generated. Default is None.
+            verbose (bool, optional): Controls whether to print progress information during fitting. If True, progress information is printed. Default is False.
+            test (bool, optional): Controls whether to test the function and return mean values instead of performing the full fitting process. If True, the function returns mean values. Default is True.
+
         Returns:
             None
 
         Attributes:
-            best_uncorr (numpy.ndarray): Best uncorrected individual.
-            best_fitness (float): Best fitness value.
-            minfitness_each_gen (numpy.ndarray): Minimum fitness at each generation.
-            Sampler (emcee.EnsembleSampler): Instance of emcee.Sampler with detailed output of the algorithm.
+            best_uncorr (numpy.ndarray): The best uncorrected individual obtained from the MCMC fitting process.
+            best_fitness (float): The fitness value of the best individual obtained from the MCMC fitting process.
+            minfitness_each_gen (numpy.ndarray): The minimum fitness value at each generation during the MCMC fitting process.
+            Sampler (emcee.EnsembleSampler): An instance of emcee.EnsembleSampler with detailed output of the MCMC algorithm.
+
         """
         #cupy or numpy
         xp = self.xp
@@ -422,63 +478,3 @@ class Fitter:
 
             #save the stat data
             stats.to_csv(os.path.join('./', 'test.csv'))
-
-
-
-
-#######################################TESTING############################################
-# from Simulations.stacked_trapezoid_simulation import StackedTrapezoidSimulation
-
-# pitch = 100 #nm distance between two trapezoidal bars
-# qzs = np.linspace(-0.1, 0.1, 20)
-# qxs = 2 * np.pi / pitch * np.ones_like(qzs)
-
-# # Define initial parameters and multiples
-
-# #Initial parameters
-# dwx = 0.1
-# dwz = 0.1
-# i0 = 10
-# bkg = 0.1
-# y1 = 0
-# height = [23.48]
-# bot_cd = 54.6
-# swa = [85]
-
-# langle = np.deg2rad(np.asarray(swa))
-# rangle = np.deg2rad(np.asarray(swa))
-
-# #simulation data
-# params = {'heights': height,
-#             'langles': langle,
-#             'rangles': rangle,
-#             'y1': y1,
-#             'bot_cd': bot_cd,
-#             'dwx': dwx,
-#             'dwz': dwz,
-#             'i0': i0,
-#             'bkg_cste': bkg
-#             }
-
-# Simulation1 = StackedTrapezoidSimulation(use_gpu=False, qys=qxs, qzs=qzs)
-
-# intensity = Simulation1.simulate_diffraction(params=params)
-
-# initial_params = {'heights': {'value': height, 'variation': 10E-5},
-#                     'langles': {'value': langle, 'variation': 10E-5},
-#                     'rangles': {'value': rangle, 'variation': 10E-5},
-#                     'y1': {'value': y1, 'variation': 10E-5},
-#                     'bot_cd': {'value': bot_cd, 'variation': 10E-5},
-#                     'dwx': {'value': dwx, 'variation': 10E-5},
-#                     'dwz': {'value': dwz, 'variation': 10E-5},
-#                     'i0': {'value': i0, 'variation': 10E-5},
-#                     'bkg_cste': {'value': bkg, 'variation': 10E-5}
-#                     }
-
-# Simulation2 = StackedTrapezoidSimulation(use_gpu=False, qys=qxs, qzs=qzs, initial_guess=initial_params)
-
-# Fitter1 = Fitter(Simulation=Simulation2, exp_data=intensity)
-
-
-# print(Fitter1.cmaes(sigma=100, ngen=100, popsize=20, mu=10, n_default=9, restarts=10, tolhistfun=10, ftarget=10, restart_from_best=True, verbose=False))
-# print(Fitter1.mcmc(N=9, sigma = np.asarray([100] * 9), nsteps=1000, nwalkers=100, test=True))

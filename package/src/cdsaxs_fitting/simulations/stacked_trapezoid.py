@@ -3,32 +3,51 @@ from .base import Simulation, Geometry
 import numpy as np
 try:
     import cupy as cp
-    CUDA_AVAILABLE = True
+    CUPY_AVAILABLE = True
 except:
-    CUDA_AVAILABLE = False
+    CUPY_AVAILABLE = False
 
 
 
 class StackedTrapezoidSimulation(Simulation):
+    """
+    A class representing a simulation of stacked trapezoids for diffraction pattern calculation.
 
+    Attributes:
+    - qys (array-like): The q-values in the y-direction for diffraction calculation.
+    - qzs (array-like): The q-values in the z-direction for diffraction calculation.
+    - xp (module): The module used for numerical computations (numpy or cupy).
+    - from_fitter (bool): Indicates if the simulation is called from the fitter.
+    - TrapezoidGeometry (StackedTrapezoidGeometry): The geometry object for the stacked trapezoids.
+    - TrapezoidDiffraction (StackedTrapezoidDiffraction): The diffraction object for the stacked trapezoids.
+
+    Methods:
+    - __init__(self, qys, qzs, from_fitter=False, use_gpu=False, initial_guess=None): Initializes the StackedTrapezoidSimulation object.
+    - simulate_diffraction(self, params=None, fitparams=None, fit_mode='cmaes', best_fit=None): Simulates the diffraction pattern of the stacked trapezoids.
+    - set_from_fitter(self, from_fitter): Sets the from_fitter attribute and updates the geometry object accordingly.
+    - geometry(self): Returns the geometry object for the stacked trapezoids.
+    """
     def __init__(self, qys, qzs, from_fitter=False, use_gpu=False, initial_guess=None):
         self.qys = qys
         self.qzs = qzs
-        self.xp = cp if use_gpu else np
+        self.xp = cp if use_gpu and CUPY_AVAILABLE else np
         self.from_fitter = from_fitter
         self.TrapezoidGeometry = StackedTrapezoidGeometry(xp=self.xp, from_fitter=self.from_fitter, initial_guess=initial_guess)
         self.TrapezoidDiffraction = StackedTrapezoidDiffraction(TrapezoidGeometry=self.TrapezoidGeometry, xp=self.xp)
 
     def simulate_diffraction(self, params=None, fitparams=None, fit_mode='cmaes', best_fit=None):
         """
-        Simulate the diffraction pattern of the stacked trapezoids
-        @param
-        params: a dictionary containing all the parameters needed to calculate the form factor
-        fitparams: a list of floats coming from the fitter not to given by the user but by the fitter Class
-        @return
-        corrected_intensity: a 2d array of floats containing the corrected intensity the innerlists corresponds to the simulated intensity obtained by varying the parameters using Fitter Class
-        """
+        Simulate the diffraction pattern of the stacked trapezoids.
 
+        Parameters:
+        - params (dict): A dictionary containing all the parameters needed to calculate the form factor.
+        - fitparams (list): A list of floats coming from the fitter, not given by the user but by the fitter Class.
+        - fit_mode (str): The fit mode to use for diffraction calculation ('cmaes' or 'mcmc').
+        - best_fit (array-like): The best fit parameters obtained from the fitter.
+
+        Returns:
+        - corrected_intensity (array-like): A 2D array of floats containing the corrected intensity. The inner lists correspond to the simulated intensity obtained by varying the parameters using the Fitter Class.
+        """
         #deep copy of the params dictionary to avoid modifying the original dictionary
         params_deepcopy = copy.deepcopy(params)
 
@@ -43,9 +62,12 @@ class StackedTrapezoidSimulation(Simulation):
         return corrected_intensity
 
     def set_from_fitter(self, from_fitter):
+        """
+        Set the from_fitter attribute and update the geometry object accordingly.
 
-        """ When the simulation is called from the fitter, set the from_fitter attribute to True and set the values of variations and initial guess accordingly"""
-
+        Parameters:
+        - from_fitter (bool): Indicates if the simulation is called from the fitter.
+        """
         self.from_fitter = from_fitter
         self.TrapezoidGeometry.from_fitter = from_fitter
         self.TrapezoidGeometry.set_variations()
@@ -53,13 +75,44 @@ class StackedTrapezoidSimulation(Simulation):
 
     @property
     def geometry(self):
+        """
+        Get the geometry object for the stacked trapezoids.
+
+        Returns:
+        - TrapezoidGeometry (StackedTrapezoidGeometry): The geometry object for the stacked trapezoids.
+        """
         return self.TrapezoidGeometry
 
 
 class StackedTrapezoidGeometry(Geometry):
+    """
+    A class representing the geometry of stacked trapezoids for simulations.
+
+    Attributes:
+    - xp (module): The numpy-like module to use for array operations.
+    - from_fitter (bool): Flag indicating whether the geometry is created from a fitter.
+    - initial_guess (dict): Dictionary containing the initial guess values for the geometry.
+    - fitparams_indices (dict): Dictionary containing the indices to assign relevant values from fit_params.
+    - variations (ndarray): Array containing the variations entered by the user from the initial_guess.
+    - initial_guess_values (ndarray): Array containing the initial guess values entered by the user.
+
+    Methods:
+    - set_variations(): Set the variations in an array.
+    - set_initial_guess_values(): Set the initial guess values in an array.
+    - calculate_ycoords(height, langle, rangle, y1, y2): Calculate y1 and y2 coordinates for each trapezoid.
+    - calculate_shift(height, langle): Calculate how much the trapezoids are shifted in the z direction.
+    - check_params(params): Check if all the required parameters are in the dictionary.
+    - set_fitparams_indices(): Calculate the indices to assign relevant values from fit_params.
+    - extract_params(fitparams=None, params=None, for_best_fit=False, for_saving=False, best_fit=None, fit_mode='cmaes'): Extract the relevant values from the fitparams to calculate the form factor.
+    """
 
     def __init__(self, xp=np, from_fitter=False, initial_guess=None):
-        
+        """
+        Parameters:
+        - xp (module): The numpy-like module to use for array operations.
+        - from_fitter (bool): Flag indicating whether the geometry is created from a fitter.
+        - initial_guess (dict): Dictionary containing the initial guess values for the geometry.
+        """
         self.xp = xp
         self.from_fitter = from_fitter
         self.initial_guess = initial_guess
@@ -69,8 +122,17 @@ class StackedTrapezoidGeometry(Geometry):
  
     def set_variations(self):
         """
-        Set the variations in an array
+        Set variations for each parameter in an array based on the initial guesses.
+
+        This method sets variations for each parameter based on the initial guesses provided. It ensures that the variations are compatible with the parameter shapes and existence of certain parameters. The variations are stored in an array accessible as `self.variations`.
+
+        Raises:
+            ValueError: If heights and left angles are not compatible, or if left and right angles are not compatible.
+
+        Returns:
+            None
         """
+
         initial_guess = self.initial_guess
 
         self.ntrapezoid = len(initial_guess['langles']['value'])
@@ -162,16 +224,19 @@ class StackedTrapezoidGeometry(Geometry):
             
     def calculate_ycoords(self, height, langle, rangle, y1, y2):
         """
-        @param
-        height: a list of floats containing height for each layer 
-                of trapezoid or a float if all the layers have the same height
-        langle: a 2d array of floats
-        rangle: a 2d array of floats
-        y1: a list of floats
-        y2: a list of floats
-        @return
-        y1, y2: a 2d array of floats
-        """                            
+        Calculate y1 and y2 coordinates for each trapezoid.
+
+        Parameters:
+        - height (float or ndarray): Height for each layer of trapezoid or a float if all layers have the same height.
+        - langle (ndarray): 2D array of left angles.
+        - rangle (ndarray): 2D array of right angles.
+        - y1 (ndarray): 1D array of y1 values.
+        - y2 (ndarray): 1D array of y2 values.
+
+        Returns:
+        - y1 (ndarray): 2D array of y1 values.
+        - y2 (ndarray): 2D array of y2 values.
+        """                         
         
         #modify y1 and y2 to match the shape of langle and rangle
         y1 = y1[..., self.xp.newaxis] * self.xp.ones_like(langle)
@@ -189,13 +254,14 @@ class StackedTrapezoidGeometry(Geometry):
 
     def calculate_shift(self, height, langle):
         """
-        This method calculates how much the trapezoids are shifted in the z direction
-        @param
-        height: a list of floats containing height for each layer 
-                of trapezoid or a float if all the layers have the same height
-        langle: a 2d array of floats
-        @return
-        shift: a list with calculated shift values
+        Calculate how much the trapezoids are shifted in the z direction.
+
+        Parameters:
+        - height (float or ndarray): Height for each layer of trapezoid or a float if all layers have the same height.
+        - langle (ndarray): 2D array of left angles.
+
+        Returns:
+        - shift (ndarray): Array of calculated shift values.
         """
         if (height.ndim == 1):
             shift = height[:, self.xp.newaxis] * self.xp.arange(langle.shape[1])
@@ -213,9 +279,9 @@ class StackedTrapezoidGeometry(Geometry):
     def check_params(self, params):
         """
         The purpose of this method is to check if all the required parameters are in the dictionary and to make sure that the inputs are arrays of the right shape
-        @param
+        Parameters:
         params: a dictionary containing all the parameters needed to calculate the form factor
-        @return
+        Returns:
         params: a dictionary containing all the parameters needed to calculate the form factor
         """
 
@@ -386,12 +452,19 @@ class StackedTrapezoidGeometry(Geometry):
         """
         Extract the relevant values from the fitparams to calculate the form factor
         
-        Parameters
-        ----------
-        fitparams: 2d array of floats obtained from the fitter
-        
-        returns
+        Parameters:
+        - fitparams (ndarray): 2D array of floats obtained from the fitter.
+        - params (dict): Dictionary containing the required parameters.
+        - for_best_fit (bool): Flag indicating whether to extract parameters for best fit.
+        - for_saving (bool): Flag indicating whether to extract parameters for saving.
+        - best_fit (ndarray): Array containing the best fit values.
+        - fit_mode (str): The fit mode used.
+
+        Returns:
         height, langle, rangle, y1_initial, y2_initial, weight, dwx, dwz, i0, bkg_cste : extracted 2d arrays of floats needed to calculate the form factor
+        
+        Note:
+        Based on the flags for_best_fit and for_saving, the extracted values are returned in different formats
         """
         
         
@@ -517,22 +590,48 @@ class StackedTrapezoidGeometry(Geometry):
 
 
 class StackedTrapezoidDiffraction():
+    """
+    Class for simulating diffraction from stacked trapezoids.
+    """
+
     
     def __init__(self, TrapezoidGeometry, xp=np):
+        """
+        Initialize the StackedTrapezoidDiffraction object.
+
+        Parameters:
+        -----------
+        TrapezoidGeometry: object
+            Object containing the geometric properties of trapezoids.
+        xp: module, optional
+            Module to use for mathematical operations. Default is numpy.
+
+        Returns:
+        --------
+        None
+        """
         self.xp = xp
         self.TrapezoidGeometry = TrapezoidGeometry
   
     def calculate_coefficients(self, qzs, height, langle, weight):
         """
-        Calculate the coefficients needed to intensities which takes in account the material through weight
-        @param
-        qz: a list of floats
-        height: a list of floats containing height for each layer 
-                of trapezoid or a float if all the layers have the same height
-        langle: a 2d array of floats
-        weight: a list of floats or None
-        @return
-        coefficients: a 3d list of floats needed to calculate the form factor
+        Calculate the coefficients needed to simulate intensities which takes in account the material through weight parameter.
+       
+       Parameters:
+        -----------
+        qzs: array_like
+            List of qz values.
+        height: array_like
+            Height for each layer of trapezoids.
+        langle: array_like
+            Left bottom angle of trapezoid.
+        weight: array_like or None
+            Material weight for each layer.
+
+        Returns:
+        --------
+        coefficients: array_like
+            Coefficients needed to calculate the form factor.
         """
 
         qzs = qzs[self.xp.newaxis, self.xp.newaxis, ...]
@@ -551,22 +650,21 @@ class StackedTrapezoidDiffraction():
         Simulation of the form factor of a trapezoid at all qx, qz position.
         Function modified and extracted from XiCam
 
-        Parameters
-        ----------
-        qys, qzs: numpy or cupy array of floats
-            List of qx/qz at which the form factor is simulated
-        y1, y2: numpy or cupy array of floats
-            Values of the bottom right/left (y1/y2) position respectively of
-            the trapezoids such as y2 - y1 = width of the bottom of the trapezoids
-        langle, rangle: numpy or cupy 2d array of floats
-            Left and right bottom angle of trapezoid
-        height: numpy or cupy of floats
-            Height of the trapezoid
+        Parameters:
+        -----------
+        qys, qzs: array_like
+            List of qx/qz at which the form factor is simulated.
+        y1, y2: array_like
+            Values of the bottom right and left position of the trapezoids.
+        langle, rangle: array_like
+            Left and right bottom angle of trapezoid.
+        height: array_like
+            Height of the trapezoid.
 
-        Returns
-        -------
-        form_factor: numpy or cupy 2d array of floats
-            List of the values of the form factor
+        Returns:
+        --------
+        form_factor: array_like
+            Values of the form factor.
         """
         tan1 = self.xp.tan(langle)[:,:, self.xp.newaxis]
         tan2 = self.xp.tan(np.pi - rangle)[:,:, self.xp.newaxis]
@@ -584,12 +682,29 @@ class StackedTrapezoidDiffraction():
     def corrections_dwi0bk(self, intensities, dw_factorx, dw_factorz,
                        scaling, bkg_cste, qxs, qzs):
         """
-        Apply corrections to the form factor
-        @param
-        intensities: a 2d array of floats
-        dw_factorx: a float
-        dw_factorz: a float
+        Apply corrections to the form factor intensities.
+
+        Parameters:
+        -----------
+        intensities: array_like
+            Intensity values.
+        dw_factorx: float
+            Factor for x-direction Debye-Waller correction.
+        dw_factorz: float
+            Factor for z-direction Debye-Waller correction.
+        scaling: float
+            Scaling factor.
+        bkg_cste: float
+            Background constant.
+        qxs, qzs: array_like
+            List of qx/qz at which the form factor is simulated.
+
+        Returns:
+        --------
+        intensities_corr: array_like
+            Corrected form factor intensities.
         """
+
 
         qxs = qxs[..., self.xp.newaxis]
         qzs = qzs[..., self.xp.newaxis]
@@ -603,11 +718,25 @@ class StackedTrapezoidDiffraction():
     
     def calculate_form_factor(self, qys, qzs, height, langle, rangle, y1_initial, y2_initial, weight):
         """
-        Calculate the form factor of the stacked trapezoid at all qx, qz position
-        @param
-        params: a dictionary containing all the parameters needed to calculate the form factor
-        @return
-        form_factor: a 1d array of floats
+        Calculate the form factor of the stacked trapezoid at all qx, qz positions.
+
+        Parameters:
+        -----------
+        qys, qzs: array_like
+            List of qx/qz at which the form factor is simulated.
+        height: array_like
+            Height of the trapezoid.
+        langle, rangle: array_like
+            Left and right bottom angle of trapezoid.
+        y1_initial, y2_initial: array_like
+            Initial values of the bottom right/left position of the trapezoids.
+        weight: array_like or None
+            Material weight for each layer.
+
+        Returns:
+        --------
+        form_factor: array_like
+            Values of the form factor.
         """
 
 
@@ -644,11 +773,25 @@ class StackedTrapezoidDiffraction():
         """
         Calculate the intensites using form factor and apply debye waller corrections
 
-        @param
-        params: a dictionary containing all the parameters needed to calculate the form factor
-        @return
-        form_factor_intensity: a 2d array of floats
+        Parameters:
+        -----------
+        qys, qzs: array_like
+            List of qx/qz at which the form factor is simulated.
+        params: dict, optional
+            Dictionary containing parameters needed for correction.
+        fitparams: array_like, optional
+            Parameters returned by optimization.
+        fit_mode: str, optional
+            Method used for optimization. Default is 'cmaes'.
+        best_fit: array_like, optional
+            Best fit obtained from optimization.
+
+        Returns:
+        --------
+        corrected_intensity: array_like
+            Corrected form factor intensity.
         """
+
 
         #Extract the parameters
         if fitparams is not None and self.TrapezoidGeometry.from_fitter:
@@ -667,7 +810,7 @@ class StackedTrapezoidDiffraction():
             rangle = langle
 
         try:
-            if CUDA_AVAILABLE and self.xp == cp:
+            if CUPY_AVAILABLE and self.xp == cp:
                 height = self.xp.asarray(height)
                 langle = self.xp.asarray(langle)
                 rangle = self.xp.asarray(rangle)
