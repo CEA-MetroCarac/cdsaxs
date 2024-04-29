@@ -1,4 +1,5 @@
 import numpy as np
+from pytest import approx
 
 
 def test_cmaes(fitter_instance, params):
@@ -32,7 +33,7 @@ def test_cmaes(fitter_instance, params):
         
         expected.append(calculated_fit[key])
 
-    np.testing.assert_allclose(calculated, expected, atol=0.1)
+    calculated = approx(expected, abs=0.1)
 
 
 def test_mcmc(fitter_instance, params):
@@ -60,5 +61,5 @@ def test_mcmc(fitter_instance, params):
             calculated.append([params[key]])     
         expected.append(calculated_fit[key])
 
-    np.testing.assert_allclose(calculated, expected, atol=1.0)
+    calculated = approx(expected, abs=1.0)
     
