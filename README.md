@@ -1,3 +1,16 @@
+# Installation
+You can install the package by running the following command in the terminal:
+```bash
+pip install git+https://github.com/CEA-MetroCarac/cdsaxs.git
+```
+Or you can clone the repository and install the package by running the following commands in the terminal:
+```bash
+git clone https://github.com/CEA-MetroCarac/cdsaxs.git
+cd cdsaxs
+pip install .
+```
+That way you'll have all the tests and examples available.
+
 # How to Use cdsaxs Package for Diffraction Simulation and Fitting
 
 Below are the instructions on how to perform diffraction simulation and fitting using the cdsaxs fitting package.
