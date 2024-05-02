@@ -203,6 +203,7 @@ class Fitter:
 
         allbreak = False
 
+        n_restarts = 0
         for restart in range(restarts + 1):
             if allbreak:
                 break
@@ -211,6 +212,7 @@ class Fitter:
                 print('Doubled popsize')
                 if restart_from_best:
                     initial_individual = halloffame[0]
+                n_restarts = restart
 
             # type of strategy: (parents, children) = (mu/mu_w, popsize), selection
             # takes place among offspring only
@@ -324,9 +326,6 @@ class Fitter:
             # create a new method to save the population and fitness arrays
             population_with_fitness = np.asarray([np.append(population_arr[i], fitness_arr[i]) for i in range(len(population_arr))])
 
-            population_with_fitness = population_with_fitness.reshape( ( popsize, n_default + 1 ) ) #plus one for fitness
-
-
             population_fr = pd.DataFrame( population_with_fitness )
             population_fr.to_csv(os.path.join(dir_save, "output.csv"))
 
@@ -421,8 +420,11 @@ class Fitter:
             
 
         #Autocorelation time to find burnin steps
-        tau = Sampler.get_autocorr_time(tol=5)
-        burnin = int(2 * np.max(tau))
+        try:
+            tau = Sampler.get_autocorr_time(tol=5)
+            burnin = int(2 * np.max(tau))
+        except:
+            burnin = int(1/3 * nsteps)
         
         
         # Data processing and analysis
