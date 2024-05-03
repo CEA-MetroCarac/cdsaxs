@@ -482,32 +482,31 @@ class Fitter:
 
     def plot_correlation(self, file, title, N, dir_save=None ):
         """
-        Generate a corner plot of the best fit parameters obtained from the MCMC fitting process.
+            Generate a corner plot of the best fit parameters obtained from the MCMC fitting process.
 
-        This method utilizes the corner package to generate a corner plot of the best fit parameters obtained from the MCMC fitting process.
+            This method utilizes the corner package to generate a corner plot of the best fit parameters obtained from the MCMC fitting process.
 
-        Args:
-            dir_save (str): The directory to save the output.
-            labels (list, optional): A list of labels for the corner plot. Default is None.
-            test (bool, optional): Controls whether to test the function and return best value instead of performing the full optimization process. If True, the function returns best value. Default is False.
+            Args:
+                file (str): The path to the file containing the data.
+                title (str): The title for the corner plot.
+                N (int): The number of parameters to consider for the corner plot.
+                dir_save (str, optional): The directory to save the output. If not provided, the plot will be displayed instead of being saved.
 
-        Returns:
-            None
+            Returns:
+                None
 
         """
-        data =np.genfromtxt(file, skip_header=1, delimiter=',')
+        data = np.genfromtxt(file, skip_header=1, delimiter=',')
 
-        data = data[:, 1:N]#the first column is the index, and the last one is the fitness value so don't take them into account
+        data = data[:, 1:N]  # the first column is the index, and the last one is the fitness value so don't take them into account
 
-        #get rid of columns with nan values
+        # get rid of columns with nan values
         data = data[~np.isnan(data).any(axis=1)]
 
         figure = corner.corner(data, labels=title, quantiles=[0.16, 0.5, 0.84], show_titles=True)
-        
+
         if dir_save is not None:
             figure.savefig(os.path.join(dir_save, "corner_plot.png"))
             print('Saved to ' + os.path.join(dir_save, 'corner_plot.png'))
         else:
             figure.show()
-
-    
