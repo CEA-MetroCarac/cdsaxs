@@ -30,6 +30,7 @@ dependencies = [
   "emcee",
   "deap",
   "scipy",
+  "corner",
 ]
 
 [project.urls]

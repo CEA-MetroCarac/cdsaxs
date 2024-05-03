@@ -7,6 +7,7 @@ import deap.base as dbase
 from deap import creator, tools, cma
 from scipy import stats
 import emcee
+import corner
 
 import numpy as np
 import pandas as pd
@@ -331,9 +332,9 @@ class Fitter:
 
         return best_corr, best_fitness
     
-    def mcmc(self, N, sigma, nsteps, nwalkers, gaussian_move=False, seed=None, verbose=False, test=True):
+    def mcmc(self, N, sigma, nsteps, nwalkers, gaussian_move=False, seed=None, verbose=False, test=False, dir_save=None):
         """
-        Generate a set of statstical data on the best fit parameters using the MCMC (Markov Chain Monte Carlo) algorithm.
+        Generate a set of statstical data on the best fit parameters using the MCMC (Markov Chain Monte Carlo) algorithm. Two kinds of options for moves to explore solution space are provided gaussian and stretch move. Default is strech move and recommended.
 
         This method utilizes the emcee package's implementation of the MCMC algorithm and generates a csv file with the statistical data of the best fit parameters.
 
@@ -380,12 +381,9 @@ class Fitter:
         # Generate a random seed if none is provided
         if seed is None:
             seed = randrange(2 ** 32)
-        seed = seed
         xp.random.seed(seed)
         
-        if hasattr(sigma, '__len__'):
-            sigma = sigma
-        else:
+        if not hasattr(sigma, '__len__'):
             sigma = [sigma] * N
             
             print('{} parameters'.format(N))
@@ -468,15 +466,48 @@ class Fitter:
         resampled_frame = population_frame.iloc[index]
         #remove nan and inf values
         resampled_frame = resampled_frame.dropna()
-        stats = resampled_frame.describe()
+        stats = resampled_frame.describe([.75,.85,.95,.99])
 
         if(test):
             return best_corr
-
-        else:  
-            #save the population array
-            # path = os.path.join('./', 'poparr.npy')
-            # np.save(os.path.join(path), population_array)
+        elif (dir_save is not None):  
+            # save the population array
+            population_fr = pd.DataFrame( population_with_fitness )
+            population_fr.to_csv(os.path.join(dir_save, "poparr.csv"))
 
             #save the stat data
-            stats.to_csv(os.path.join('./', 'test.csv'))
+            stats.to_csv(os.path.join(dir_save, 'test.csv'))
+            print('Saved to ' + os.path.join(dir_save, 'test.csv'))
+
+
+    def plot_correlation(self, file, title, N, dir_save=None ):
+        """
+        Generate a corner plot of the best fit parameters obtained from the MCMC fitting process.
+
+        This method utilizes the corner package to generate a corner plot of the best fit parameters obtained from the MCMC fitting process.
+
+        Args:
+            dir_save (str): The directory to save the output.
+            labels (list, optional): A list of labels for the corner plot. Default is None.
+            test (bool, optional): Controls whether to test the function and return best value instead of performing the full optimization process. If True, the function returns best value. Default is False.
+
+        Returns:
+            None
+
+        """
+        data =np.genfromtxt(file, skip_header=1, delimiter=',')
+
+        data = data[:, 1:N]#the first column is the index, and the last one is the fitness value so don't take them into account
+
+        #get rid of columns with nan values
+        data = data[~np.isnan(data).any(axis=1)]
+
+        figure = corner.corner(data, labels=title, quantiles=[0.16, 0.5, 0.84], show_titles=True)
+        
+        if dir_save is not None:
+            figure.savefig(os.path.join(dir_save, "corner_plot.png"))
+            print('Saved to ' + os.path.join(dir_save, 'corner_plot.png'))
+        else:
+            figure.show()
+
+    
