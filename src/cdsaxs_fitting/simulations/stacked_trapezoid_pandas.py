@@ -131,6 +131,8 @@ class StackedTrapezoidGeometry(Geometry):
         self.initial_guess_values = None
         self.initial_guess_dataframe = None
 
+
+
     def set_initial_guess_dataframe(self):
         """
         Set the initial guess values in a dataframe
@@ -181,22 +183,10 @@ class StackedTrapezoidGeometry(Geometry):
         rescaled_df = rescaled_fitparams_df.copy()
         keys = rescaled_fitparams_df.columns
         for key in keys:
-            if 'height' in key:
+            if key.startswith('height') and key in ('y1','bot_cd','dwx','dwz','i0','bkg_cste'):
                 rescaled_df.loc[rescaled_df[key] < 0, key] = np.nan
-            elif 'angle' in key:
-                rescaled_df.loc[(rescaled_df[key] < 0) | (rescaled_df[key] > 90), key] = np.nan
-            elif 'y1' in key:
-                rescaled_df.loc[rescaled_df[key] < 0, key] = np.nan
-            elif 'bot_cd' in key:
-                rescaled_df.loc[rescaled_df[key] < 0, key] = np.nan
-            elif 'dwx' in key:
-                rescaled_df.loc[rescaled_df[key] < 0, key] = np.nan
-            elif 'dwz' in key:
-                rescaled_df.loc[rescaled_df[key] < 0, key] = np.nan
-            elif 'i0' in key:
-                rescaled_df.loc[rescaled_df[key] < 0, key] = np.nan
-            elif 'bkg_cste' in key:
-                rescaled_df.loc[rescaled_df[key] < 0, key] = np.nan
+            elif key.startswith('angle') in key:
+                rescaled_df.loc[(rescaled_df[key] < 0) | (rescaled_df[key] > np.pi/2), key] = np.nan
 
         return rescaled_df
 
