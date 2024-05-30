@@ -39,7 +39,7 @@ class StackedTrapezoidSimulation(Simulation):
         self.TrapezoidGeometry = StackedTrapezoidGeometry(xp=self.xp, from_fitter=self.from_fitter, initial_guess=initial_guess)
         self.TrapezoidDiffraction = StackedTrapezoidDiffraction(TrapezoidGeometry=self.TrapezoidGeometry, xp=self.xp)
 
-    def simulate_diffraction(self, params=None, fitparams=None, fit_mode='cmaes', best_fit=None):
+    def simulate_diffraction(self, fitparams=None, fit_mode='cmaes', best_fit=None):
         """
         Simulate the diffraction pattern of the stacked trapezoids.
 
@@ -53,15 +53,11 @@ class StackedTrapezoidSimulation(Simulation):
         - corrected_intensity (array-like): A 2D array of floats containing the corrected intensity. The inner lists correspond to the simulated intensity obtained by varying the parameters using the Fitter Class.
         """
 
-        if fitparams is not None:
-            fitparams_dataframe = self.TrapezoidGeometry.convert_to_dataframe(fitparams=fitparams)
-        else:
-            fitparams_dataframe = self.TrapezoidGeometry.convert_to_dataframe(params)
         
         if fit_mode == 'cmaes':
-            corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, fit_mode=fit_mode, fitparams_dataframe = fitparams_dataframe)
+            corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, fit_mode=fit_mode, fitparams = fitparams)
         elif fit_mode == 'mcmc':
-            corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, fit_mode=fit_mode, best_fit=best_fit, fitparams_dataframe = fitparams_dataframe)
+            corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, fit_mode=fit_mode, best_fit=best_fit, fitparams = fitparams)
 
         if not self.from_fitter:
             return corrected_intensity[0]
@@ -164,6 +160,7 @@ class StackedTrapezoidGeometry(Geometry):
         # Create a DataFrame from the modified dictionary
         self.initial_guess_dataframe = pd.DataFrame(modified_params)
 
+
     def convert_to_dataframe(self, fitparams):
         """
             Convert the fitparams to a DataFrame
@@ -178,6 +175,7 @@ class StackedTrapezoidGeometry(Geometry):
                 keys = [key for key in keys if not key.startswith('langle')]
 
             pd_fitparams = pd.DataFrame(fitparams, columns=keys)
+            pd_fitparams = self.rescale_fitparams(pd_fitparams)
 
         else:
             
@@ -454,7 +452,7 @@ class StackedTrapezoidDiffraction():
         return form_factor
 
     
-    def correct_form_factor_intensity(self, qys, qzs, fit_mode='cmaes', best_fit=None, fitparams_dataframe=None):
+    def correct_form_factor_intensity(self, qys, qzs, fitparams, fit_mode='cmaes', best_fit=None, ):
         """
         Calculate the intensites using form factor and apply debye waller corrections
 
@@ -477,9 +475,8 @@ class StackedTrapezoidDiffraction():
             Corrected form factor intensity.
         """
 
-        if fitparams_dataframe is not None:
-            fitparams_df = self.TrapezoidGeometry.rescale_fitparams(fitparams_df=fitparams_dataframe)
-
+        fitparams_df = self.TrapezoidGeometry.convert_to_dataframe(fitparams)
+        
 
         try:
             if CUPY_AVAILABLE and self.xp == cp:
@@ -498,7 +495,5 @@ class StackedTrapezoidDiffraction():
         form_factor_intensity = self.xp.absolute(form_factor) ** 2
 
         corrected_intensity = self.corrections_dwi0bk(intensities=form_factor_intensity, qys=qys, qzs=qzs, df=fitparams_df)
-        
-        print(corrected_intensity)
-        
+
         return corrected_intensity
