@@ -64,16 +64,20 @@ class StackedTrapezoidSimulation(Simulation):
 
         return corrected_intensity
 
-    def set_from_fitter(self, from_fitter):
+    def set_from_fitter(self, from_fitter, best_fit_cmaes_df=None):
         """
         Set the from_fitter attribute and update the geometry object accordingly.
 
         Parameters:
         - from_fitter (bool): Indicates if the simulation is called from the fitter.
+        - best_fit_cmaes_df (DataFrame): The best fit parameters obtained from the CMAES.
         """
         self.TrapezoidGeometry.set_initial_guess_dataframe()
         self.from_fitter = from_fitter
         self.TrapezoidGeometry.from_fitter = from_fitter
+
+        if best_fit_cmaes_df is not None:
+            self.TrapezoidGeometry.set_initial_guess_dataframe(best_fit_cmaes_df)
 
 
     @property
@@ -127,7 +131,7 @@ class StackedTrapezoidGeometry(Geometry):
         self.ntrapezoid = None
 
 
-    def set_initial_guess_dataframe(self):
+    def set_initial_guess_dataframe(self, best_fit_cmaes_df=None):
         """
         Set the initial guess values in a dataframe
 
@@ -143,10 +147,9 @@ class StackedTrapezoidGeometry(Geometry):
             else:
                 raise ValueError('either langles or rangles should be provided')
 
-        # New dictionary to hold the modified structure
         modified_params = {}
 
-        # Iterate over the original dictionary
+        #modify initial guess diciotnary to make it suitable for dataframe
         for key, value in self.initial_guess.items():
             if key in ['heights', 'langles', 'rangles']:
                 if not isinstance(value['value'], (list, tuple, np.ndarray)):
@@ -157,8 +160,13 @@ class StackedTrapezoidGeometry(Geometry):
             else:
                 modified_params[key] = value
 
-        # Create a DataFrame from the modified dictionary
-        self.initial_guess_dataframe = pd.DataFrame(modified_params)
+        guess = pd.DataFrame(modified_params)
+
+        # if it is MCMC we replace the initial guess values by best estimate obtained from CMAES
+        if best_fit_cmaes_df is not None:
+            guess.loc['value'] = best_fit_cmaes_df.loc[0]
+
+        self.initial_guess_dataframe = guess
 
 
     def convert_to_dataframe(self, fitparams):

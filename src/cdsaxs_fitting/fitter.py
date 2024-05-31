@@ -70,37 +70,17 @@ class Fitter:
 
         Parameters
         ----------
-        best_fit : dict
-            Dictionary containing the best fit parameters obtained using the CMA-ES algorithm.
+        best_fit : pandas.DataFrame
+            The best fit parameters obtained using the CMA-ES algorithm.
 
         Returns
         -------
             None
         """
-        height = best_fit['heights']
-        langle = best_fit['langles']
-        rangle = best_fit.get('rangles', None)
-        weight = best_fit.get('weights', None)
-        y1 = best_fit['y1']
-        bot_cd = best_fit['bot_cd']
-        dwx = best_fit['dwx']
-        dwz = best_fit['dwz']
-        i0 = best_fit['i0']
-        bkg_cste = best_fit['bkg_cste']
 
-        if isinstance(y1, self.xp.ndarray):
-            if isinstance(rangle, self.xp.ndarray) and isinstance(weight, self.xp.ndarray):
-                best_fit_list = [ height[0], langle[0], rangle[0], y1[0], bot_cd[0], weight[0], dwx[0], dwz[0], i0[0], bkg_cste[0] ]
-            elif isinstance(rangle, self.xp.ndarray) and weight is None:
-                best_fit_list = [ height[0], langle[0], rangle[0], y1[0], bot_cd[0], dwx[0], dwz[0], i0[0], bkg_cste[0] ]
-            elif isinstance(weight, self.xp.ndarray) and rangle is None:
-                best_fit_list = [ height[0], langle[0], y1[0], bot_cd[0], weight[0], dwx[0], dwz[0], i0[0], bkg_cste[0] ]
-        elif isinstance(y1, float):
-            best_fit_list = [ height[0], langle[0], rangle[0], y1, bot_cd, dwx, dwz, i0, bkg_cste ]
-        
+        self.best_fit_cmaes = best_fit
 
-
-        self.best_fit_cmaes = best_fit_list
+        return None
 
     def cmaes(self, sigma, ngen,
             popsize, mu, n_default, restarts, tolhistfun, ftarget,
@@ -242,7 +222,10 @@ class Fitter:
                 cur_gen += 1
                 # Generate a new population
                 population = toolbox.generate()
-                population_list.append(population)
+
+                # save the population only if user wants to
+                if dir_save is not None:
+                    population_list.append(population)
 
                 # Evaluate the individuals
                 fitnesses = toolbox.evaluate(population)
@@ -288,9 +271,9 @@ class Fitter:
 
         best_uncorr = halloffame[0]  # np.abs(halloffame[0])
         best_fitness = halloffame[0].fitness.values[0]
-        best_corr = self.Simulation.geometry.extract_params([best_uncorr], for_best_fit=True)
+        best_corr = self.Simulation.geometry.convert_to_dataframe([best_uncorr])
 
-        if best_corr:
+        if best_corr is not None:
             #update best fit attribute
             self.set_best_fit_cmaes(best_fit=best_corr)
 
@@ -304,31 +287,18 @@ class Fitter:
         if test:
             return best_corr
         
-        population_arr = self.xp.asarray(
+        if dir_save is not None:
+        
+            #convert in to right format
+            population_arr = self.xp.asarray(
             [list(individual) for generation in population_list for individual in
             generation])
-        
-        population_arr = self.Simulation.geometry.extract_params(population_arr, for_saving=True)
 
+            fitness_arr = self.xp.asarray(
+            [individual.fitness.values[0] for generation in population_list for individual in
+            generation])
 
-        fitness_arr = self.xp.asarray(
-            [ [individual.fitness.values[0]] for generation in population_list for
-            individual in generation])
-        
-        # convert to numpy arrays if using GPU
-        try:
-            if xp == cp:
-                population_arr = population_arr.get()
-                fitness_arr = fitness_arr.get()
-        except:
-            pass
-
-        if dir_save is not None:
-            # create a new method to save the population and fitness arrays
-            population_with_fitness = np.asarray([np.append(population_arr[i], fitness_arr[i]) for i in range(len(population_arr))])
-
-            population_fr = pd.DataFrame( population_with_fitness )
-            population_fr.to_csv(os.path.join(dir_save, "output.csv"))
+            self.save_population(population_arr, fitness_arr, dir_save, fit_mode='cmaes')
 
         return best_corr, best_fitness
     
@@ -362,7 +332,7 @@ class Fitter:
         xp = self.xp
 
         # Setting Simulation attribute to match the case
-        self.Simulation.set_from_fitter(True)
+        self.Simulation.set_from_fitter(True, self.best_fit_cmaes)
 
         #declare Fitness function and register
         residual = Residual(self.exp_data, fit_mode='mcmc', xp=self.xp, Simulation=self.Simulation, best_fit=self.best_fit_cmaes)
@@ -430,7 +400,7 @@ class Fitter:
 
         flatchain = xp.transpose(Sampler.get_chain(discard=burnin), axes=[1, 0, 2]).reshape(s[0] * s[1], s[2])
         flatlnprobability = Sampler.get_log_prob(discard=burnin).transpose().flatten()
-        minfitness_each_gen = xp.min(-Sampler.get_log_prob(discard=burnin) * c, axis=0)
+        minfitness_each_gen = xp.min(-1  * Sampler.get_log_prob(discard=burnin) * c, axis=0)
         
         #convert log probability to usual fitness
         flatfitness = -flatlnprobability * c
@@ -439,45 +409,24 @@ class Fitter:
         best_index = np.argmin(flatfitness)
         best_fitness = flatfitness[best_index]
         best_uncorr = flatchain[best_index]
-        best_corr = self.Simulation.geometry.extract_params(fitparams=[best_uncorr], for_best_fit=True, best_fit=self.best_fit_cmaes)
-      
-        
-        population_array = self.Simulation.geometry.extract_params(flatchain, for_saving=True, best_fit=self.best_fit_cmaes)
+        best_corr = self.Simulation.geometry.convert_to_dataframe([best_uncorr])
 
-        try:
-            if xp == cp:
-                population_array = population_array.get()
-        except:
-            pass
+        population_df = self.Simulation.geometry.convert_to_dataframe(flatchain)
 
-        # create a new method to save the population and fitness arrays
-        population_with_fitness = np.asarray([np.append(population_array[i], flatfitness[i]) for i in range(len(population_array))])
-        population_with_fitness = population_with_fitness.reshape( ( s[0]*s[1] , N+1 ) ) #plus one for fitness
 
-        population_frame = pd.DataFrame( population_with_fitness )
-
-        gen_start = 0
-        gen_stop = len(flatfitness)
-        gen_step = 1
-        popsize = int(population_frame.shape[0] / len(flatfitness))
-        index = []
-        for i in range(gen_start, gen_stop, gen_step):
-            index.extend(list(range(i * popsize, (i + 1) * popsize)))
-        resampled_frame = population_frame.iloc[index]
-        #remove nan and inf values
-        resampled_frame = resampled_frame.dropna()
-        stats = resampled_frame.describe([.75,.85,.95,.99])
+        mcmc_stats = self.do_stats(population_df.dropna())
 
         if(test):
-            return best_corr
-        elif (dir_save is not None):  
-            # save the population array
-            population_fr = pd.DataFrame( population_with_fitness )
-            population_fr.to_csv(os.path.join(dir_save, "poparr.csv"))
+            return best_corr, best_fitness
+        
+        elif dir_save is not None:
+            self.save_population(flatchain, flatfitness, dir_save, fit_mode='mcmc')
 
             #save the stat data
-            stats.to_csv(os.path.join(dir_save, 'test.csv'))
-            print('Saved to ' + os.path.join(dir_save, 'test.csv'))
+            mcmc_stats.to_csv(os.path.join(dir_save, 'mcmc_stats.csv'))
+            print('Saved to ' + os.path.join(dir_save))
+
+        return mcmc_stats
 
 
     def plot_correlation(self, file, title, N, dir_save=None ):
@@ -510,3 +459,75 @@ class Fitter:
             print('Saved to ' + os.path.join(dir_save, 'corner_plot.png'))
         else:
             figure.show()
+
+    def save_population(self, population_arr, fitness_arr, dir_save, fit_mode='cmaes'):
+        """
+        Save the population array to a csv file.
+
+        Args:
+            population (numpy.ndarray): The population array to save.
+            dir_save (str): The directory to save the output.
+
+        Returns:
+            None
+
+        """
+        fitness_dataframe = pd.DataFrame(fitness_arr, columns=['fitness'])
+        
+        population_dataframe = self.Simulation.geometry.convert_to_dataframe(population_arr)
+        
+        frames = [population_dataframe, fitness_dataframe]
+        result = pd.concat(frames, axis=1).dropna()
+
+        if fit_mode == 'cmaes':
+            name = 'population_cmaes.csv'
+        else:
+            name = 'population_mcmc.csv'
+        
+        result.to_csv(os.path.join(dir_save, name), index=False)
+        print('Saved to ' + os.path.join(dir_save, name))
+
+    @staticmethod
+    def do_stats(df, cf=0.99):
+        """
+        Generate a set of statistical data on the best fit parameters obtained from the MCMC fitting process.
+
+        This method generates a set of statistical data on the best fit parameters obtained from the MCMC fitting process.
+
+        Args:
+            df (pandas.DataFrame): The DataFrame containing the best fit parameters.
+
+        Returns:
+            pandas.DataFrame: A DataFrame containing the statistical data on the best fit parameters.
+
+        """
+        #calculate confidence interval for each parameter
+        mean = df.mean()
+        std = df.std()
+        count = df.count()
+        min = df.min()
+        max = df.max()
+
+        match cf:
+            case 0.99:
+                z = 2.576
+            case 0.95:
+                z = 1.96
+            case 0.90:
+                z = 1.645
+            case _:
+                z = 2.576
+
+        uncertainity = z * std / np.sqrt(count)
+
+        lower_ci = mean - uncertainity
+        upper_ci = mean + uncertainity
+
+        stat = pd.DataFrame({'mean': mean, 'std': std, 'count': count, 'min': min, 'max': max, 'lower_ci': lower_ci, 'upper_ci': upper_ci, 'uncertainity': uncertainity})
+
+        return stat
+
+
+
+        
+
