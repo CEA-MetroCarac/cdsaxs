@@ -227,7 +227,7 @@ class StackedTrapezoidGeometry(Geometry):
             if key.startswith('height') or key in ('y1','bot_cd','dwx','dwz','i0','bkg_cste'):
                 rescaled_df.loc[rescaled_df[key] < 0, key] = np.nan
             elif key.startswith('rangle') or key.startswith('langle'):
-                rescaled_df.loc[(rescaled_df[key] < 0) | (rescaled_df[key] > np.pi/2), key] = np.nan
+                rescaled_df.loc[(rescaled_df[key] < 0) | (rescaled_df[key] > np.pi), key] = np.nan
 
         return rescaled_df
 
