@@ -2,9 +2,7 @@ from typing import Protocol
 
 
 class Geometry(Protocol):
-    def extract_params(
-        self, fitparams=None, params=None, for_best_fit=False, for_saving=False, best_fit=None, fit_mode='cmaes',
-    ):
+    def convert_to_dataframe(self, fitparams):
         ...
 
 
@@ -17,6 +15,6 @@ class Simulation(Protocol):
         ...
 
     def simulate_diffraction(
-        self, params=None, fitparams=None, fit_mode='cmaes', best_fit=None
+        self, fitparams=None, fit_mode='cmaes', best_fit=None
     ):
         ...
