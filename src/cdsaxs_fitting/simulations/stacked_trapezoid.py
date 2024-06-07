@@ -128,7 +128,6 @@ class StackedTrapezoidGeometry(Geometry):
         self.initial_guess_dataframe = None
         self.symmetric = False
 
-
     def set_initial_guess_dataframe(self, best_fit_cmaes_df=None):
         """
         Set the initial guess values in a dataframe and put them in the attribute initial_guess_dataframe. 
@@ -172,7 +171,6 @@ class StackedTrapezoidGeometry(Geometry):
             guess.loc['value'] = best_fit_cmaes_df.loc[0]
 
         self.initial_guess_dataframe = guess
-
 
     def convert_to_dataframe(self, fitparams):
         """
