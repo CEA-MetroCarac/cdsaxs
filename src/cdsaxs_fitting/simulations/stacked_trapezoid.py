@@ -39,7 +39,7 @@ class StackedTrapezoidSimulation(Simulation):
         self.TrapezoidGeometry = StackedTrapezoidGeometry(xp=self.xp, from_fitter=self.from_fitter, initial_guess=initial_guess)
         self.TrapezoidDiffraction = StackedTrapezoidDiffraction(TrapezoidGeometry=self.TrapezoidGeometry, xp=self.xp)
 
-    def simulate_diffraction(self, fitparams=None, fit_mode='cmaes', best_fit=None):
+    def simulate_diffraction(self, fitparams=None, fit_mode='cmaes', best_fit=None, params=None):
         """
         Simulate the diffraction pattern of the stacked trapezoids.
 
@@ -53,7 +53,9 @@ class StackedTrapezoidSimulation(Simulation):
         - corrected_intensity (array-like): A 2D array of floats containing the corrected intensity. The inner lists correspond to the simulated intensity obtained by varying the parameters using the Fitter Class.
         """
 
-        
+        if params is not None:
+            fitparams = params
+
         if fit_mode == 'cmaes':
             corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, fitparams = fitparams)
         elif fit_mode == 'mcmc':

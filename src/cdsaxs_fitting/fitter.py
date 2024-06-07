@@ -429,7 +429,7 @@ class Fitter:
         return mcmc_stats
 
 
-    def plot_correlation(self, file, title, N, dir_save=None ):
+    def plot_correlation(self, file, dir_save=None):
         """
             Generate a corner plot of the best fit parameters obtained from the MCMC fitting process.
 
@@ -437,8 +437,6 @@ class Fitter:
 
             Args:
                 file (str): The path to the file containing the data.
-                title (str): The title for the corner plot.
-                N (int): The number of parameters to consider for the corner plot.
                 dir_save (str, optional): The directory to save the output. If not provided, the plot will be displayed instead of being saved.
 
             Returns:
@@ -446,8 +444,14 @@ class Fitter:
 
         """
         data = np.genfromtxt(file, skip_header=1, delimiter=',')
+        #read the headers for each column
+        with open(file, 'r') as f:
+            title = f.readline().strip().split(',')
+        
 
-        data = data[:, 1:N]  # the first column is the index, and the last one is the fitness value so don't take them into account
+        #remove the last column which is the fitness value
+        data = data[:, :-1]
+        title = title[:-1]
 
         # get rid of columns with nan values
         data = data[~np.isnan(data).any(axis=1)]
