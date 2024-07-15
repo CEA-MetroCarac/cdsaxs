@@ -78,6 +78,7 @@ class StackedTrapezoidSimulation(Simulation):
         self.from_fitter = from_fitter
         self.TrapezoidGeometry.from_fitter = from_fitter
 
+        #for setting the best fit parameters obtained from CMAES for MCMC calculations
         if best_fit_cmaes_df is not None:
             self.TrapezoidGeometry.set_initial_guess_dataframe(best_fit_cmaes_df)
 
@@ -245,7 +246,7 @@ class StackedTrapezoidGeometry(Geometry):
         rescaled_df = rescaled_fitparams_df.copy()
         keys = rescaled_fitparams_df.columns
         for key in keys:
-            if key.startswith('height') or key in ('y1','bot_cd','dwx','dwz','i0','bkg_cste'):
+            if key.startswith('height') or key in ('y_start','bot_cd','dwx','dwz','i0','bkg_cste'):
                 rescaled_df.loc[rescaled_df[key] < 0, key] = np.nan
             elif key.startswith('rangle') or key.startswith('langle'):
                 rescaled_df.loc[(rescaled_df[key] < 0) | (rescaled_df[key] > np.pi), key] = np.nan
@@ -268,7 +269,7 @@ class StackedTrapezoidGeometry(Geometry):
         langles= df.filter(like='langle').values
         rangles = df.filter(like='rangle').values
 
-        y1 = df.filter(like='y1').values * self.xp.ones_like(langles)
+        y1 = df.filter(like='y_start').values * self.xp.ones_like(langles)
         y2 = df.filter(like='bot_cd').values * self.xp.ones_like(langles)
 
         #calculate y1 and y2 for each trapezoid cumilatively using cumsum but need to preserve the first values
