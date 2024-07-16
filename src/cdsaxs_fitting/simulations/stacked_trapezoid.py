@@ -270,7 +270,7 @@ class StackedTrapezoidGeometry(Geometry):
         rangles = df.filter(like='rangle').values
 
         y1 = df.filter(like='y_start').values * self.xp.ones_like(langles)
-        y2 = df.filter(like='bot_cd').values * self.xp.ones_like(langles)
+        y2 = y1 + df.filter(like='bot_cd').values * self.xp.ones_like(langles)
 
         #calculate y1 and y2 for each trapezoid cumilatively using cumsum but need to preserve the first values
         #/!\ for 90 degrees, tan(90deg) is infinite so height/tan(90deg) is equal to the zero upto the precision of 10E-14 only

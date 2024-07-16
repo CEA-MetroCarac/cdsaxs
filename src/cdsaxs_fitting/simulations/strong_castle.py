@@ -119,24 +119,24 @@ class StrongCastleGeometry(StackedTrapezoidGeometry):
 
     def calculate_ycoords(self, df):
         """
-                This is the modified version of the calculate_ycoords method in the parent class. The two trapezoids are separated into two groups and the y coordinates are calculated
-                and the y coordinates of the second trapezoid are shifted by the overlay value
+            This is the modified version of the calculate_ycoords method in the parent class. The two trapezoids are separated into two groups and the y coordinates are calculated
+            and the y coordinates of the second trapezoid are shifted by the overlay value
 
 
-                Parameters:
-                -----------
-                df : pandas.DataFrame
-                    dataframe containing the trapezoid parameters
+            Parameters:
+            -----------
+            df : pandas.DataFrame
+                dataframe containing the trapezoid parameters
 
-                Returns:
-                --------
-                y1 : numpy.ndarray
-                    y1 coordinates of the trapezoids
-                y2 : numpy.ndarray
-                    y2 coordinates of the trapezoids
-
-                
+            Returns:
+            --------
+            y1 : numpy.ndarray
+                y1 coordinates of the trapezoids
+            y2 : numpy.ndarray
+                y2 coordinates of the trapezoids
         """
+
+        #first trapezoid
         first_trapezoid_columns = [
             col for col in df.columns
             if all(int(num) <= self.n1 for num in re.findall(r'\d+', col)) or not re.findall(r'\d+', col)
@@ -144,28 +144,39 @@ class StrongCastleGeometry(StackedTrapezoidGeometry):
 
         first_trapezoid_df = df[first_trapezoid_columns]
 
+        first_trapezoid_y1, first_trapezoid_y2  = super().calculate_ycoords(first_trapezoid_df)
+
+        #Second trapezoid
         second_trapezoid_columns = [
             col for col in df.columns
             if all(int(num) > self.n1 for num in re.findall(r'\d+', col))
         ]
 
+        #giving the second trapezoid correct parameters
         second_trapezoid_df = df[second_trapezoid_columns]
         second_trapezoid_df.loc[:, "bot_cd"] = second_trapezoid_df["top_cd"].values
 
-
-        first_trapezoid_y1, first_trapezoid_y2  = super().calculate_ycoords(first_trapezoid_df)
-
         second_trapezoid_y1, second_trapezoid_y2 = super().calculate_ycoords(second_trapezoid_df)
-        second_trapezoid_y1 = second_trapezoid_y1 + df["overlay"].values
-        second_trapezoid_y2 = second_trapezoid_y2 + df["overlay"].values
 
+        #shift the y coordinates of the second trapezoid by the overlay value
+        midpoint_trapezoid1 = (first_trapezoid_df['y_start'].values + first_trapezoid_df['bot_cd'].values)/2
+        midpoint_trapezoid2 = (second_trapezoid_df['y_start'].values + second_trapezoid_df['bot_cd'].values)/2
+        translation = midpoint_trapezoid1 - midpoint_trapezoid2#overlay is defined as the difference between the midpoints of the two trapezoids so aligning the midpoints 
+        translation_with_overlay = translation + df["overlay"].values
+
+        #translate
+        second_trapezoid_y1 = second_trapezoid_y1 + translation_with_overlay
+        second_trapezoid_y2 = second_trapezoid_y2 + translation_with_overlay
+
+        #combine
         y1 = np.hstack( (first_trapezoid_y1, second_trapezoid_y1) )
         y2 = np.hstack( (first_trapezoid_y2, second_trapezoid_y2) )
 
-        print( y1 )
-        print( y2 )
+        print( "y1:", y1 )
+        print( "y2:", y2 )
 
         return y1 , y2
+
 
 class StrongCastleDiffraction(StackedTrapezoidDiffraction):
 
