@@ -5,35 +5,19 @@ import pandas as pd
 
 from .stacked_trapezoid import StackedTrapezoidSimulation, StackedTrapezoidGeometry, StackedTrapezoidDiffraction
 
-try:
-    import cupy as cp
-    CUPY_AVAILABLE = True
-except:
-    CUPY_AVAILABLE = False
 
 
 
 class StrongCastleSimulation(StackedTrapezoidSimulation):
 
     def __init__(self, qys, qzs, from_fitter=False, use_gpu=False, initial_guess=None):
+        
         super().__init__(qys, qzs, from_fitter=from_fitter, use_gpu=use_gpu, initial_guess=initial_guess)
 
-        self.TrapezoidGeometry = StrongCastleGeometry(xp=self.xp, from_fitter=self.from_fitter, initial_guess=initial_guess)
-        self.TrapezoidDiffraction = StrongCastleDiffraction(self.TrapezoidGeometry, xp=self.xp)
+        self.TrapezoidGeometry = StrongCastleGeometry(from_fitter=self.from_fitter, initial_guess=initial_guess)
+        self.TrapezoidDiffraction = StrongCastleDiffraction(self.TrapezoidGeometry)
 
-    def simulate_diffraction(self, fitparams=None, fit_mode='cmaes', best_fit=None, params=None):
-        if params is not None:
-            fitparams = params
 
-        if fit_mode == 'cmaes':
-            corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, fitparams = fitparams)
-        elif fit_mode == 'mcmc':
-            corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, fitparams = fitparams)
-
-        if not self.from_fitter:
-            return corrected_intensity[0]
-
-        return corrected_intensity
 
 
 
@@ -61,10 +45,12 @@ class StrongCastleGeometry(StackedTrapezoidGeometry):
         self.from_fitter = from_fitter
         self.n1 = 0
         self.n2 = 0
-        if self.from_fitter:
-            self.set_n1_n2(initial_guess["n1"], initial_guess["n2"])
+        self.initial_guess = initial_guess
 
-            initial_guess_for_fit = self.remove_fixed_params(initial_guess)
+        if self.initial_guess is not None:
+            self.set_n1_n2(self.initial_guess["n1"], self.initial_guess["n2"])
+
+            initial_guess_for_fit = self.remove_fixed_params(self.initial_guess)
 
             super().__init__(xp=xp, from_fitter=from_fitter, initial_guess=initial_guess_for_fit)
         else:
@@ -91,7 +77,7 @@ class StrongCastleGeometry(StackedTrapezoidGeometry):
         self.n1 = n1
         self.n2 = n2
 
-    def check_initial_guess(self, initial_guess):
+    def check_initial_guess(self, params):
         """
             Check if the number of trapezoids  n1+n2 is equal to the number of angles in the initial_guess dictionary
 
@@ -102,12 +88,17 @@ class StrongCastleGeometry(StackedTrapezoidGeometry):
 
         """
 
-        langles = initial_guess["langles"]
-        rangles = initial_guess["rangles"]
+        if self.initial_guess is None: 
+            langles = params["langles"]
+            rangles = params["rangles"]
+        else:
+            langles = self.initial_guess["langles"]["value"]
+            rangles = self.initial_guess["rangles"]["value"]
 
         #from the initial_guess dictionary get the number of langles
         # Check the number of angles provided
         if langles is not None or rangles is not None:
+            
             # Determine the number of angles in initial_guess
             n = langles.shape[0] if langles is not None else rangles.shape[0]
             
@@ -152,6 +143,10 @@ class StrongCastleGeometry(StackedTrapezoidGeometry):
             if all(int(num) > self.n1 for num in re.findall(r'\d+', col))
         ]
 
+        #if height is constant then add height1 to the second trapezoid columns
+        if self.from_fitter and df.filter(like="height").shape[1] < 2:
+            second_trapezoid_columns.append("height1")
+
         #giving the second trapezoid correct parameters
         second_trapezoid_df = df[second_trapezoid_columns]
         second_trapezoid_df.loc[:, "bot_cd"] = second_trapezoid_df["top_cd"].values
@@ -165,15 +160,17 @@ class StrongCastleGeometry(StackedTrapezoidGeometry):
         translation_with_overlay = translation + df["overlay"].values
 
         #translate
+
+        #if from fit convert in to array to avoid broadcasting error
+        if self.from_fitter:
+            translation_with_overlay = translation_with_overlay[..., np.newaxis] * self.xp.ones_like(second_trapezoid_y1)
+
         second_trapezoid_y1 = second_trapezoid_y1 + translation_with_overlay
         second_trapezoid_y2 = second_trapezoid_y2 + translation_with_overlay
 
         #combine
         y1 = np.hstack( (first_trapezoid_y1, second_trapezoid_y1) )
         y2 = np.hstack( (first_trapezoid_y2, second_trapezoid_y2) )
-
-        print( "y1:", y1 )
-        print( "y2:", y2 )
 
         return y1 , y2
 
@@ -187,8 +184,9 @@ class StrongCastleDiffraction(StackedTrapezoidDiffraction):
 
     def correct_form_factor_intensity(self, qys, qzs, fitparams):
 
-        self.geometry.set_n1_n2(fitparams["n1"], fitparams["n2"])
-        fitparams_without_fixed = self.geometry.remove_fixed_params(fitparams)
-
-
-        return super().correct_form_factor_intensity(qys, qzs, fitparams_without_fixed)
+        if self.geometry.initial_guess is None:
+            self.geometry.set_n1_n2(fitparams["n1"], fitparams["n2"])
+            fitparams_without_fixed = self.geometry.remove_fixed_params(fitparams)
+            return super().correct_form_factor_intensity(qys, qzs, fitparams_without_fixed)
+        
+        return super().correct_form_factor_intensity(qys, qzs, fitparams)

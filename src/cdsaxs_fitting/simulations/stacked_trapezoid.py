@@ -36,7 +36,8 @@ class StackedTrapezoidSimulation(Simulation):
         self.qzs = qzs
         self.xp = cp if use_gpu and CUPY_AVAILABLE else np
         self.from_fitter = from_fitter
-        self.TrapezoidGeometry = StackedTrapezoidGeometry(xp=self.xp, from_fitter=self.from_fitter, initial_guess=initial_guess)
+        self.initial_guess = initial_guess
+        self.TrapezoidGeometry = StackedTrapezoidGeometry(xp=self.xp, from_fitter=self.from_fitter, initial_guess=self.initial_guess)
         self.TrapezoidDiffraction = StackedTrapezoidDiffraction(TrapezoidGeometry=self.TrapezoidGeometry, xp=self.xp)
 
     def simulate_diffraction(self, fitparams=None, fit_mode='cmaes', best_fit=None, params=None):
@@ -53,13 +54,10 @@ class StackedTrapezoidSimulation(Simulation):
         - corrected_intensity (array-like): A 2D array of floats containing the corrected intensity. The inner lists correspond to the simulated intensity obtained by varying the parameters using the Fitter Class.
         """
 
-        if params is not None:
-            fitparams = params
-
         if fit_mode == 'cmaes':
-            corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, fitparams = fitparams)
+            corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, fitparams = params)
         elif fit_mode == 'mcmc':
-            corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, fitparams = fitparams)
+            corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, fitparams = params)
 
         if not self.from_fitter:
             return corrected_intensity[0]
@@ -200,6 +198,13 @@ class StackedTrapezoidGeometry(Geometry):
             #similar to set_initial_guess_dataframe look at how many values there are in the given key if it is an array split them
             modified_params = {}
 
+            # #if height is constant create an array of the same length as the number of trapezoids
+            # if isinstance(fitparams["heights"], float) or isinstance(fitparams["heights"], int) :
+            #     if fitparams["langles"] is not None:
+            #         fitparams["heights"] = np.array( fitparams["heights"] * np.ones_like(fitparams["langles"]) )
+            #     if fitparams["rangles"] is not None:
+            #         fitparams["heights"] = np.array( fitparams["heights"] * np.ones_like(fitparams["rangles"]) )
+
             for key in fitparams.keys():
                 if key == 'heights' or key == 'langles' or key == 'rangles':
                     if isinstance(fitparams[key], (list, tuple, np.ndarray)):
@@ -279,7 +284,6 @@ class StackedTrapezoidGeometry(Geometry):
 
         y1[:,1:] = y1[:,1:]  +  y1_cumsum[:,:-1]
         y2[:,1:] = y2[:,1:]  + y2_cumsum[:,:-1]
-
 
         return y1, y2
 
@@ -484,7 +488,7 @@ class StackedTrapezoidDiffraction():
         form_factor = self.xp.sum(self.calculate_form_factor(qys=qys, qzs=qzs, df=fitparams_df) * coeff, axis=1)
         
         form_factor_intensity = self.xp.absolute(form_factor) ** 2
-
+    
         corrected_intensity = self.corrections_dwi0bk(intensities=form_factor_intensity, qys=qys, qzs=qzs, df=fitparams_df)
 
         return corrected_intensity
