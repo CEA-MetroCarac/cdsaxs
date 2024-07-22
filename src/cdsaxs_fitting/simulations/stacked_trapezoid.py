@@ -488,6 +488,8 @@ class StackedTrapezoidDiffraction():
         form_factor = self.xp.sum(self.calculate_form_factor(qys=qys, qzs=qzs, df=fitparams_df) * coeff, axis=1)
         
         form_factor_intensity = self.xp.absolute(form_factor) ** 2
+
+        return form_factor_intensity
     
         corrected_intensity = self.corrections_dwi0bk(intensities=form_factor_intensity, qys=qys, qzs=qzs, df=fitparams_df)
 
