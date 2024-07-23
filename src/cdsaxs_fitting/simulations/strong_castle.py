@@ -1,6 +1,14 @@
+"""This module is a child class of the StackedTrapezoidSimulation class. Its purpose is to implement the 
+    Strong Castle model which calculates the overlay.
+
+    Classes:
+        StrongCastleSimulation: This class is a child class of the StackedTrapezoidSimulation class.
+        StrongCastleGeometry: This class is a child class of the StackedTrapezoidGeometry class.
+        StrongCastleDiffraction: This class is a child class of the StackedTrapezoidDiffraction class.
+"""
+
 import re
 import numpy as np
-import pandas as pd
 
 
 from .stacked_trapezoid import StackedTrapezoidSimulation, StackedTrapezoidGeometry, StackedTrapezoidDiffraction
@@ -9,8 +17,20 @@ from .stacked_trapezoid import StackedTrapezoidSimulation, StackedTrapezoidGeome
 
 
 class StrongCastleSimulation(StackedTrapezoidSimulation):
+    """ This class is a child class of the StackedTrapezoidSimulation class.
+    """
 
     def __init__(self, qys, qzs, from_fitter=False, use_gpu=False, initial_guess=None):
+        """ This init method modifies the parent class init method by adding the StrongCastleGeometry and StrongCastleDiffraction classes
+            instead of the StackedTrapezoidGeometry and StackedTrapezoidDiffraction classes.
+
+        Args:
+            qys (np.ndarray): points in the y direction where form factor is calculated
+            qzs (_type_): points in the z direction where form factor is calculated
+            from_fitter (bool, optional): variable to identify if the simulation is coming from fitter or not. Defaults to False.
+            use_gpu (bool, optional): wether to use gpu or not. Defaults to False.
+            initial_guess (dictionary, optional): a dictionary containing all the parameters. Defaults to None.
+        """
         
         super().__init__(qys, qzs, from_fitter=from_fitter, use_gpu=use_gpu, initial_guess=initial_guess)
 
@@ -22,26 +42,22 @@ class StrongCastleSimulation(StackedTrapezoidSimulation):
 
 
 class StrongCastleGeometry(StackedTrapezoidGeometry):
-
-    #there are two types of parameters coming in as dictionary ones that need to be fitted and the ones that are fixed i need to remove the fixed ones from the dictionary
-    # and then do the regular fitting for the rest of the parameters
-    #fixed params 
+    """ This class is a child class of the StackedTrapezoidGeometry class. Several methods are modified and added to implement the Strong Castle model(notably the most important
+        calculate_ycoords).
+    """
 
     def __init__(self, xp=np, from_fitter=False, initial_guess=None):
         
         """
-            init basically same as parent class except that it removes the fixed parameters which are n1 and n2 from the initial_guess dictionary
+        This init method is similar to the parent class, except it removes the fixed parameters `n1` and `n2`
+        (supposed to represent the first layer and second layer of trapezoids) from the `initial_guess` dictionary.
 
-            Parameters:
-            -----------
-            xp : numpy or cupy
-                numpy or cupy module
-            from_fitter : bool
-                whether the object is created from the fitter or not
-            initial_guess : dict
-                dictionary containing the initial guess for the parameters
-
+        Args:
+            xp (numpy or cupy): The numpy or cupy module.
+            from_fitter (bool): Indicates whether the object is created from the fitter or not.
+            initial_guess (dict): A dictionary containing the initial guess for the parameters.
         """
+
         self.from_fitter = from_fitter
         self.n1 = 0
         self.n2 = 0
@@ -57,9 +73,13 @@ class StrongCastleGeometry(StackedTrapezoidGeometry):
             super().__init__(xp=xp, from_fitter=from_fitter, initial_guess=None)
     
     def remove_fixed_params(self, initial_guess):
+        """Remove the fixed parameters which are the number of first and second layer of trapezoids n1 and n2 from the initial_guess dictionary so that they are not fitted.
 
-        """
-            Remove the fixed parameters which are the number of trapezoids n1 and n2 from the initial_guess dictionary
+        Args:
+            initial_guess (dictionary): A dictionary containing the initial guess for the parameters provided by the user.
+
+        Returns:
+            initial_guess (dictionary): A dictionary containing the initial guess for the parameters without the fixed parameters.
         """
         #remove the parameters which are fixed and not be fitted from the initial_guess dictionary
         fixed_params = {"n1", "n2"}
@@ -71,8 +91,11 @@ class StrongCastleGeometry(StackedTrapezoidGeometry):
         return initial_guess_for_fit
     
     def set_n1_n2(self, n1, n2):
-        """
-            Set the number of trapezoids n1 and n2
+        """Set self.n1 and self.n2 to the provided values.
+
+        Args:
+            n1 (integer): number of trapezoids in first layer of trapezoids
+            n2 (integer): number of trapezoids in second layer of trapezoids
         """
         self.n1 = n1
         self.n2 = n2
@@ -81,10 +104,8 @@ class StrongCastleGeometry(StackedTrapezoidGeometry):
         """
             Check if the number of trapezoids  n1+n2 is equal to the number of angles in the initial_guess dictionary
 
-            Parameters:
-            -----------
-            initial_guess : dict
-                dictionary containing the initial guess for the parameters
+            Args:
+            initial_guess (dict): dictionary containing the initial guess for the parameters
 
         """
 
@@ -110,21 +131,15 @@ class StrongCastleGeometry(StackedTrapezoidGeometry):
 
     def calculate_ycoords(self, df):
         """
-            This is the modified version of the calculate_ycoords method in the parent class. The two trapezoids are separated into two groups and the y coordinates are calculated
-            and the y coordinates of the second trapezoid are shifted by the overlay value
+        This is the modified version of the calculate_ycoords method in the parent class. The two trapezoids are separated into two groups and the y coordinates are calculated
+        and the y coordinates of the second trapezoid are shifted by the overlay value.
 
+        Args:
+            df (pandas.DataFrame): dataframe containing the trapezoid parameters
 
-            Parameters:
-            -----------
-            df : pandas.DataFrame
-                dataframe containing the trapezoid parameters
-
-            Returns:
-            --------
-            y1 : numpy.ndarray
-                y1 coordinates of the trapezoids
-            y2 : numpy.ndarray
-                y2 coordinates of the trapezoids
+        Returns:
+            y1 (numpy.ndarray): y1 coordinates of the trapezoids
+            y2 (numpy.ndarray): y2 coordinates of the trapezoids
         """
 
         #first trapezoid
@@ -176,17 +191,25 @@ class StrongCastleGeometry(StackedTrapezoidGeometry):
 
 
 class StrongCastleDiffraction(StackedTrapezoidDiffraction):
-
-    def __init__(self, geometry, xp=np):
-        self.geometry = geometry
-        super().__init__(geometry, xp=xp)
-        
+    """ This class is a child class of the StackedTrapezoidDiffraction class. It modifies the correct_form_factor_intensity method to account for the two 
+        fixed params n1 and n2 which are the number of trapezoids in the first and second layer of trapezoids respectively.
+    """
 
     def correct_form_factor_intensity(self, qys, qzs, fitparams):
+        """remove the fixed parameters n1 and n2 from the fitparams dictionary and call the parent class correct_form_factor_intensity method.
 
-        if self.geometry.initial_guess is None:
-            self.geometry.set_n1_n2(fitparams["n1"], fitparams["n2"])
-            fitparams_without_fixed = self.geometry.remove_fixed_params(fitparams)
+        Args:
+            qys (np.ndarray): points in the y direction where form factor is calculated
+            qzs (np.ndarray): points in the z direction where form factor is calculated
+            fitparams (np.ndarray): a dictionary containing the parameters
+
+        Returns:
+            corrected_intensity (np.ndarray): intensity of the strong castle model
+        """
+
+        if self.TrapezoidGeometry.initial_guess is None:
+            self.TrapezoidGeometry.set_n1_n2(fitparams["n1"], fitparams["n2"])
+            fitparams_without_fixed = self.TrapezoidGeometry.remove_fixed_params(fitparams)
             return super().correct_form_factor_intensity(qys, qzs, fitparams_without_fixed)
         
         return super().correct_form_factor_intensity(qys, qzs, fitparams)

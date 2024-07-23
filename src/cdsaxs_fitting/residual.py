@@ -1,14 +1,11 @@
-import os
+from typing import TYPE_CHECKING, Optional
+if TYPE_CHECKING:
+    from .simulations.base import Simulation
 import numpy as np
-
 try:
     import cupy as cp
 except:
     pass
-
-from typing import TYPE_CHECKING, Optional
-if TYPE_CHECKING:
-    from .simulations.base import Simulation
 
 
 

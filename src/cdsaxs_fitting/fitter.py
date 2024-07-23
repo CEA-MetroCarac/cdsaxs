@@ -1,3 +1,9 @@
+""" This module contains the Fitter class, which is designed to fit the cdsaxs experimental data using the CMA-ES (Covariance Matrix Adaptation Evolution Strategy)
+    and then do a statstical analysis of the best fit parameters using the MCMC (Markov Chain Monte Carlo) algorithm. 
+
+    Classes:
+        Fitter: A class that fits the cdsaxs experimental data using the CMA-ES and MCMC algorithms.
+"""
 import sys
 import os
 from typing import TYPE_CHECKING
@@ -48,87 +54,61 @@ class Fitter:
         """
         Initialize the Fitter class with the Simulation instance and experimental data.
         
-        Parameters
-        ----------
-        Simulation : Simulation
-            An instance of the Simulation class representing the simulated diffraction pattern.
-        exp_data : numpy.ndarray    
-            Experimental diffraction data.
+        Attributes:
+            Simulation (Simulation): An instance of the Simulation class representing the simulated diffraction pattern.
+            exp_data (numpy.ndarray): Experimental diffraction data.
         
-        Returns
-        -------
-            None
+        Returns: None
         """
+
         self.Simulation = Simulation
         self.exp_data = exp_data
         self.xp = Simulation.xp
-        self.best_fit_cmaes = None
+        self.best_fit_cmaes = None #set the best fit obtained from cmaes to MCMC 
         
     def set_best_fit_cmaes(self, best_fit):
-        """
-        Set the best fit parameters obtained using the CMA-ES algorithm.
+            """
+            Set the best fit parameters obtained using the CMA-ES algorithm.
 
-        Parameters
-        ----------
-        best_fit : pandas.DataFrame
-            The best fit parameters obtained using the CMA-ES algorithm.
+            Args:
+                best_fit (pandas.DataFrame): The best fit parameters obtained using the CMA-ES algorithm.
 
-        Returns
-        -------
-            None
-        """
+            Returns:
+                None
+            """
 
-        self.best_fit_cmaes = best_fit
+            self.best_fit_cmaes = best_fit
+            return None
 
-        return None
-
-    def cmaes(self, sigma, ngen,
-            popsize, mu, n_default, restarts, tolhistfun, ftarget,
-            restart_from_best=True, verbose=True, dir_save=None, test=False):
+    def cmaes(self, sigma, ngen, popsize, mu, n_default, restarts, tolhistfun, ftarget,
+              restart_from_best=True, verbose=True, dir_save=None, test=False):
         """
         Fit experimental data using the Covariance Matrix Adaptation Evolution Strategy (CMA-ES) algorithm.
 
         This method utilizes a modified version of the CMA-ES algorithm to fit experimental data.
 
-        Parameters
-        ----------
-        sigma : float
-            The initial standard deviation for each parameter.
-        ngen : int
-            The number of generations to run the algorithm.
-        popsize : int
-            The size of the population (number of candidate solutions) in each generation.
-        mu : int
-            The number of parents/points for recombination.
-        n_default : int
-            The number of parameters to be optimized.
-        restarts : int
-            The number of restarts allowed during the optimization process.
-        tolhistfun : float
-            The tolerance for the history of the best fitness value.
-        ftarget : float
-            The target fitness value.
-        restart_from_best : bool, optional
-            Determines whether to restart from the best individual found so far. Default is True.
-        verbose : bool, optional
-            Controls whether to print progress information during optimization. Default is True.
-        dir_save : str, optional
-            The directory to save the output. Default is None.
-        test : bool, optional
-            Controls whether to test the function and return best value instead of performing the full optimization process. If True, the function returns best value. Default is False.
+        Args:
+            sigma (float): The initial standard deviation for each parameter.
+            ngen (int): The number of generations to run the algorithm.
+            popsize (int): The size of the population (number of candidate solutions) in each generation.
+            mu (int): The number of parents/points for recombination.
+            n_default (int): The number of parameters to be optimized.
+            restarts (int): The number of restarts allowed during the optimization process.
+            tolhistfun (float): The tolerance for the history of the best fitness value.
+            ftarget (float): The target fitness value.
+            restart_from_best (bool, optional): Determines whether to restart from the best individual found so far. Default is True.
+            verbose (bool, optional): Controls whether to print progress information during optimization. Default is True.
+            dir_save (str, optional): The directory to save the output. Default is None.
+            test (bool, optional): Controls whether to test the function and return best value instead of performing the full optimization process. If True, the function returns best value. Default is False.
 
-        Returns
-        -------
+        Returns:
             tuple: A tuple containing the best fit parameters and the corresponding fitness value.
 
-        Attributes
-        ----------
-        best_fit_cmaes : list or None
-            List containing the best fit parameters obtained using the CMA-ES algorithm.
+        Attributes:
+            best_fit_cmaes (list or None): List containing the best fit parameters obtained using the CMA-ES algorithm.
 
-        Notes
-        -----
-        This method is modified from deap/algorithms.py to return a list of populations instead of the final population and to incorporate additional termination criteria based on neuromorphic algorithms. The function was originally extracted from XiCam and has been modified for specific use cases.
+        Notes:
+            This method is modified from deap/algorithms.py to return a list of populations instead of the final population and to incorporate additional termination criteria based on neuromorphic algorithms. The function was originally extracted from XiCam and has been modified for specific use cases.
 
         """
 
@@ -302,7 +282,7 @@ class Fitter:
 
         return best_corr, best_fitness
     
-    def mcmc(self, N, sigma, nsteps, nwalkers, gaussian_move=False, seed=None, verbose=False, test=False, dir_save=None):
+    def mcmc_bestfit_stats(self, N, sigma, nsteps, nwalkers, gaussian_move=False, seed=None, verbose=False, test=False, dir_save=None):
         """
         Generate a set of statstical data on the best fit parameters using the MCMC (Markov Chain Monte Carlo) algorithm. Two kinds of options for moves to explore solution space are provided gaussian and stretch move. Default is strech move and recommended.
 

@@ -1,3 +1,7 @@
+""" 
+    This is a protocol that defines the methods that should be implemented to ensure that the Simulation class 
+    is compatible with the fitter class.
+"""
 from typing import Protocol
 
 
@@ -41,4 +45,10 @@ class Simulation(Protocol):
     def simulate_diffraction(
         self, fitparams=None, fit_mode='cmaes', best_fit=None
     ):
+        
+        """ This is a obligatory method that should be implemented by the Simulation class. It is used by Residual class.
+
+        Raises:
+            NotImplementedError: _description_
+        """
         raise NotImplementedError("Subclasses must implement this method")
