@@ -1,12 +1,11 @@
 """This module simulates the diffraction pattern of a stacked trapezoids model.
 
-This module is built upon the protocol defined in base.py.
+It is built upon the protocol defined in base.py.
 
 Classes:
-- StackedTrapezoidSimulation: A class representing a simulation of stacked trapezoids for diffraction pattern calculation.
-- StackedTrapezoidGeometry: A class representing the geometry of stacked trapezoids for simulations.
-- StackedTrapezoidDiffraction: A class for simulating diffraction from stacked trapezoids.
-
+    StackedTrapezoidSimulation: A class representing a simulation of stacked trapezoids for diffraction pattern calculation.
+    StackedTrapezoidGeometry: A class representing the geometry of stacked trapezoids for simulations.
+    StackedTrapezoidDiffraction: A class for simulating diffraction from stacked trapezoids.
 """
 
 import numpy as np
@@ -397,12 +396,6 @@ class StackedTrapezoidDiffraction():
 
         dw_factorx = df.filter(like='dwx').values.flatten()
         dw_factorz = df.filter(like='dwz').values.flatten()
-
-        qys = qys[..., self.xp.newaxis]
-        qzs = qzs[..., self.xp.newaxis]
-
-        dw_factorx = df.filter(like='dwx').values.flatten()
-        dw_factorz = df.filter(like='dwz').values.flatten()
         scaling = df.filter(like='i0').values.flatten()
         bkg_cste = df.filter(like='bkg_cste').values.flatten()
 
@@ -456,16 +449,13 @@ class StackedTrapezoidDiffraction():
 
         fitparams_df = self.TrapezoidGeometry.convert_to_dataframe(fitparams)
         
-        
         #Actual Calculations
 
         coeff = self.calculate_coefficients(qzs=qzs, df = fitparams_df)
 
         form_factor = self.xp.sum(self.calculate_form_factor(qys=qys, qzs=qzs, df=fitparams_df) * coeff, axis=1)
-        
-        form_factor_intensity = self.xp.absolute(form_factor) ** 2
 
-        return form_factor_intensity
+        form_factor_intensity = self.xp.absolute(form_factor) ** 2
     
         corrected_intensity = self.corrections_dwi0bk(intensities=form_factor_intensity, qys=qys, qzs=qzs, df=fitparams_df)
 
