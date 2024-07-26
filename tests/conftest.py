@@ -19,7 +19,7 @@ def params():
     # Initial parameters
     dwx = 0.1
     dwz = 0.1
-    i0 = 10
+    i0 = 10.
     bkg = 0.1
     y1 = 0.
     height = [20.]
@@ -91,7 +91,7 @@ def simulate_intensities(params, qzs_qys):
     qzs, qys = qzs_qys
     stacked_trapezoid = simulation.StackedTrapezoidSimulation(qzs=qzs, qys=qys)
     
-    return stacked_trapezoid.simulate_diffraction(params=params)
+    return stacked_trapezoid.simulate_diffraction(fitparams=params)
 
 @pytest.fixture
 def initial_params(params):

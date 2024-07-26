@@ -67,18 +67,18 @@ class Fitter:
         self.best_fit_cmaes = None #set the best fit obtained from cmaes to MCMC 
         
     def set_best_fit_cmaes(self, best_fit):
-            """
-            Set the best fit parameters obtained using the CMA-ES algorithm.
+        """
+        Set the best fit parameters obtained using the CMA-ES algorithm.
 
-            Args:
-                best_fit (pandas.DataFrame): The best fit parameters obtained using the CMA-ES algorithm.
+        Args:
+            best_fit (pandas.DataFrame): The best fit parameters obtained using the CMA-ES algorithm.
 
-            Returns:
-                None
-            """
+        Returns:
+            None
+        """
 
-            self.best_fit_cmaes = best_fit
-            return None
+        self.best_fit_cmaes = best_fit
+        return None
 
     def cmaes(self, sigma, ngen, popsize, mu, n_default, restarts, tolhistfun, ftarget,
               restart_from_best=True, verbose=True, dir_save=None, test=False):
