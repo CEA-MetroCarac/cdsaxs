@@ -1,4 +1,4 @@
-import cdsaxs_fitting.simulations.stacked_trapezoid as simulation
+import cdsaxs.simulations.stacked_trapezoid as simulation
 import numpy as np
 import pandas as pd
 from pytest import approx, fixture, mark, skip

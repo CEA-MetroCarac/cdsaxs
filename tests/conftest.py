@@ -1,5 +1,5 @@
-import cdsaxs_fitting.simulations.stacked_trapezoid as simulation
-import cdsaxs_fitting.fitter as fitter
+import cdsaxs.simulations.stacked_trapezoid as simulation
+import cdsaxs.fitter as fitter
 import numpy as np
 import pytest
 

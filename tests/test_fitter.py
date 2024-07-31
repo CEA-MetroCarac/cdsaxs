@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 import os
 import pandas.testing as pdt
-from cdsaxs_fitting.simulations import stacked_trapezoid as simulation
-from cdsaxs_fitting import fitter
+from cdsaxs.simulations import stacked_trapezoid as simulation
+from cdsaxs import fitter
 
 
 def test_fitter_initialization(fitter_instance, simulate_intensities):

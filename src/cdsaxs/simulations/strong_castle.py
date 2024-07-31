@@ -206,7 +206,7 @@ class StrongCastleDiffraction(StackedTrapezoidDiffraction):
         Returns:
             corrected_intensity (np.ndarray): intensity of the strong castle model
         """
-
+        #remove non fitted parameters before calling the parent class method
         if self.TrapezoidGeometry.initial_guess is None:
             self.TrapezoidGeometry.set_n1_n2(fitparams["n1"], fitparams["n2"])
             fitparams_without_fixed = self.TrapezoidGeometry.remove_fixed_params(fitparams)

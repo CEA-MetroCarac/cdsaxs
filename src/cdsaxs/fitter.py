@@ -403,8 +403,9 @@ class Fitter:
             self.save_population(flatchain, flatfitness, dir_save, fit_mode='mcmc')
 
             #save the stat data
-            mcmc_stats.to_csv(os.path.join(dir_save, 'mcmc_stats.csv'))
-            print('Saved to ' + os.path.join(dir_save))
+            path_mcmc_stats = os.path.join(dir_save, 'mcmc_stats.csv')
+            mcmc_stats.to_csv(path_mcmc_stats)
+            print('Saved to ' + path_mcmc_stats)
 
         return mcmc_stats
 

@@ -1,7 +1,6 @@
-from cdsaxs_fitting.simulations.strong_castle import StrongCastleSimulation, StrongCastleGeometry
+from cdsaxs.simulations.strong_castle import StrongCastleSimulation, StrongCastleGeometry
 from pytest import approx, fixture
 import numpy as np
-import pandas as pd
 
 class TestStrongCastle:
 

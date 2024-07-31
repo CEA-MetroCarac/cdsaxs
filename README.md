@@ -1,3 +1,9 @@
+# Critical Dimension Small Angle X-ray Scattering (cdsaxs) Package
+
+The `cdsaxs` package is a Python package for simulating and fitting cdsaxs data obtained from synchrotron experiments. This package is developed to help researchers extract the
+different parameters of the nanostructures from the experimental data. The collection of functions developed at CEA (French Alternative Energies and Atomic Energy Commission) by former PhD students and at
+Lawrence Berkeley National Laboratory and Brookhaven National Laboratory served as the foundation for this package[[1]](#references).
+
 # Installation
 You can install the package by running the following command in the terminal:
 ```bash
@@ -99,3 +105,6 @@ Then use MCMC method to give you statistics of the best fit.
 ```python
 mcmc = Fitter1.mcmc(N=9, sigma=np.asarray([100] * 9), nsteps=1000, nwalkers=18)
 ```
+
+## References
+1. [Xi-cam cdsaxs repository](https://github.com/Xi-CAM/Xi-cam.CDSAXS/tree/master/xicam/CDSAXS)

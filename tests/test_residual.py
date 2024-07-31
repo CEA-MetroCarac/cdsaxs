@@ -1,5 +1,5 @@
-import cdsaxs_fitting.residual as Residual
-from cdsaxs_fitting.simulations.stacked_trapezoid import StackedTrapezoidSimulation
+import cdsaxs.residual as Residual
+from cdsaxs.simulations.stacked_trapezoid import StackedTrapezoidSimulation
 import numpy as np
 import pytest
 
