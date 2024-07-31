@@ -28,4 +28,4 @@ jobs:
           python -m pip install pytest pytest-cov
           python -m pip install .
       - name: Test with pytest
-        run: pytest tests/
+        run: pytest --cov=cdsaxs --cov-report=term --cov-config=pyproject.toml tests/

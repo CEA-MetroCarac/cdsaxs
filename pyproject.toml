@@ -69,7 +69,7 @@ dependencies = [
 check = "mypy --install-types --non-interactive {args:src/cdsaxs}"
 
 [tool.coverage.run]
-source_pkgs = ["cdsaxs", "tests"]
+source_pkgs = ["cdsaxs"]
 branch = true
 parallel = true
 omit = [
