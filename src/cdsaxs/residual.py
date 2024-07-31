@@ -4,8 +4,8 @@ if TYPE_CHECKING:
 import numpy as np
 try:
     import cupy as cp
-except:
-    pass
+except ModuleNotFoundError:
+    cp = np
 
 
 

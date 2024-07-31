@@ -10,14 +10,15 @@ Classes:
 
 import numpy as np
 import pandas as pd
-import cupy as cp
+try:
+    import cupy as cp
+    CUPY_AVAILABLE = True
+except ModuleNotFoundError:
+    CUPY_AVAILABLE = False
+    cp = np
+
 
 from .base import Simulation, Geometry
-
-try:
-    CUPY_AVAILABLE = True
-except:
-    CUPY_AVAILABLE = False
 
 
 class StackedTrapezoidSimulation(Simulation):

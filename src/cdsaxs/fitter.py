@@ -19,8 +19,8 @@ import numpy as np
 import pandas as pd
 try:
     import cupy as cp
-except:
-    pass
+except ModuleNotFoundError:
+    cp = np
 
 from .residual import Residual
 
