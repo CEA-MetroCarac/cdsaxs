@@ -493,15 +493,14 @@ class Fitter:
         min = df.min()
         max = df.max()
 
-        match cf:
-            case 0.99:
-                z = 2.576
-            case 0.95:
-                z = 1.96
-            case 0.90:
-                z = 1.645
-            case _:
-                z = 2.576
+        if cf == 0.99:
+            z = 2.576
+        elif cf == 0.95:
+            z = 1.96
+        elif cf == 0.90:
+            z = 1.645
+        else:
+            z = 2.576
 
         uncertainity = z * std / np.sqrt(count)
 
