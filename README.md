@@ -71,7 +71,7 @@ Also, if fit is for symmetric case rangles can be ommited from the dictionary ab
 ### Prepare the Data
 
 ```python
-from cdsaxs_fitting.fitter import Fitter
+from cdsaxs.fitter import Fitter
 
 # Initial parameters
 initial_params = {

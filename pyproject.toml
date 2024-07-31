@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "cdsaxs-fitting"
+name = "cdsaxs"
 dynamic = ["version"]
 description = 'Fit CDSAXS geometry'
 readme = "README.md"
@@ -39,7 +39,7 @@ Issues = "https://github.com/CEA-MetroCarac/cdsaxs/issues"
 Source = "https://github.com/CEA-MetroCarac/cdsaxs"
 
 [tool.hatch.version]
-path = "src/cdsaxs_fitting/__about__.py"
+path = "src/cdsaxs/__about__.py"
 
 [tool.hatch.envs.default]
 dependencies = [
@@ -66,19 +66,19 @@ dependencies = [
   "mypy>=1.0.0",
 ]
 [tool.hatch.envs.types.scripts]
-check = "mypy --install-types --non-interactive {args:src/cdsaxs_fitting tests}"
+check = "mypy --install-types --non-interactive {args:src/cdsaxs}"
 
 [tool.coverage.run]
-source_pkgs = ["cdsaxs_fitting", "tests"]
+source_pkgs = ["cdsaxs", "tests"]
 branch = true
 parallel = true
 omit = [
-  "src/cdsaxs_fitting/__about__.py",
+  "src/cdsaxs/__about__.py",
 ]
 
 [tool.coverage.paths]
-cdsaxs_fitting = ["src/cdsaxs_fitting", "*/cdsaxs-fitting/src/cdsaxs_fitting"]
-tests = ["tests", "*/cdsaxs-fitting/tests"]
+cdsaxs = ["src/cdsaxs", "*/cdsaxs/src/cdsaxs"]
+tests = ["*/cdsaxs/tests"]
 
 [tool.coverage.report]
 exclude_lines = [
