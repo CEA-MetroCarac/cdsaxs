@@ -29,10 +29,9 @@ jobs:
           python -m pip install .
       - name: Test with pytest
         run: pytest --cov=cdsaxs --cov-report=term --cov-report=html --cov-config=pyproject.toml tests/
-      - name: list dir
-        run: ls htmlcov  
       - name: Archive code coverage results
         uses: actions/upload-artifact@v4
+        if: ${{ matrix.python-version == 3.12 }}
         with:
           name: code-coverage-report
           path: htmlcov/
