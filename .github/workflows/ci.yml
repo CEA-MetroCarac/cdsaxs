@@ -28,4 +28,11 @@ jobs:
           python -m pip install pytest pytest-cov
           python -m pip install .
       - name: Test with pytest
-        run: pytest --cov=cdsaxs --cov-report=term --cov-config=pyproject.toml tests/
+        run: pytest --cov=cdsaxs --cov-report=term --cov-report=html --cov-config=pyproject.toml tests/
+      - name: list dir
+        run: ls      
+      - name: Archive code coverage results
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-report
+          path: coverage.html
