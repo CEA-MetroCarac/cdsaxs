@@ -109,7 +109,7 @@ explore the parameter space and converge on the optimal solution. The implementa
 For CD-SAXS experiment, the algorithm starts with the experimental data collected. Then, a series of in-depth line profile generated, through a set of parameters as describe earlier. 
 Afterwards, the calculated analytical Fourier transform is compared with the experimental data using a mean-absolute error log:
 
-$$\Xi=\frac{1}{N_{q}-1}\sum_{q}\left|\log_{10}I_{Sim}(q)-\log_{10}I(q)\right|$$
+$$\Xi=\frac{1}{N_{q}-1}\sum_{q}\log_{10}I_{Sim}(q)-\log_{10}I(q)$$
 
 where $I_{\mathrm{Sim}}(\mathbf{q})$ is the simulated intensity and $I(\mathbf{q})$ is the experimental intensity.
 $\Xi$ is called goodness of fit. The algorithm then tries to minimize $\Xi$ by adjusting the parameters of the model.
