@@ -57,14 +57,15 @@ $$
 
 where,
 
-$$
-    m_{1} = \tan\left(\beta_{1}\right) \\
-    m_{2} = \tan\left(\pi - \beta_{r}\right) \\
-    t_{1} = q_{x} + m_{1} q_{z} \\
-    t_{2} = q_{x} + m_{2} q_{z}
-$$
+$$m_{1} = \tan\left(\beta_{1}\right)$$
 
-$\beta$ 's are the bottom side angles of the trapezoid. $ q_{x} , q_{z} $ are the fourier space coordinates, $ \omega_{0} $ is the width of the trapezoid and $ h $ is the height of the trapezoid.
+$$m_{2} = \tan\left(\pi - \beta_{r}\right)$$
+
+$$t_{1} = q_{x} + m_{1} q_{z}$$
+
+$$t_{2} = q_{x} + m_{2} q_{z}$$
+
+$\beta$'s are the bottom side angles of the trapezoid. $q_{x} , q_{z}$ are the fourier space coordinates, $\omega_{0}$ is the width of the trapezoid and $h$ is the height of the trapezoid.
 
 ## Fitting algorithm
 
@@ -108,9 +109,7 @@ explore the parameter space and converge on the optimal solution. The implementa
 For CD-SAXS experiment, the algorithm starts with the experimental data collected. Then, a series of in-depth line profile generated, through a set of parameters as describe earlier. 
 Afterwards, the calculated analytical Fourier transform is compared with the experimental data using a mean-absolute error log:
 
-$$
-    \Xi=\frac{1}{N_{\mathrm{q}}-1} \sum_{\mathbf{q}}\left|\log _{10} I_{\mathrm{Sim}}(\mathbf{q})-\log _{10} I(\mathbf{q})\right|
-$$
+$$\Xi=\frac{1}{N_{q}-1}\sum_{q}|\log_{10}I_{Sim}(q)-\log_{10}I(q)|$$
 
 where $I_{\mathrm{Sim}}(\mathbf{q})$ is the simulated intensity and $I(\mathbf{q})$ is the experimental intensity.
 $\Xi$ is called goodness of fit. The algorithm then tries to minimize $\Xi$ by adjusting the parameters of the model.
@@ -130,34 +129,3 @@ Once all the population of possible solutions are found we can use it to obtain 
 # Examples 
 
 Please consult the [examples](https://github.com/CEA-MetroCarac/cdsaxs/tree/main/Examples) folder for more information on how to use the package.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
