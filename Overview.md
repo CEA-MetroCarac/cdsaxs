@@ -58,15 +58,13 @@ $$
 where,
 
 $$
-
-\mathrm{m}_{1} = \tan\left(\beta_{1}\right) \\
-m_{2} = \tan\left(\pi - \beta_{r}\right) \\
-t_{1} = q_{x} + m_{1} q_{z} \\
-t_{2} = q_{x} + m_{2} q_{z}
-
+    m_{1} = \tan\left(\beta_{1}\right) \\
+    m_{2} = \tan\left(\pi - \beta_{r}\right) \\
+    t_{1} = q_{x} + m_{1} q_{z} \\
+    t_{2} = q_{x} + m_{2} q_{z}
 $$
 
-$ \beta$'s are the bottom side angles of the trapezoid. $ q_{x} , q_{z} $ are the fourier space coordinates, $ \omega_{0} $ is the width of the trapezoid and $ h $ is the height of the trapezoid.
+$\beta$'s are the bottom side angles of the trapezoid. $ q_{x} , q_{z} $ are the fourier space coordinates, $ \omega_{0} $ is the width of the trapezoid and $ h $ is the height of the trapezoid.
 
 ## Fitting algorithm
 
