@@ -58,9 +58,12 @@ $$
 where,
 
 $$
-    m_{1} = \tan\left(\beta_{1}\right) \\
-    m_{2} = \tan\left(\pi - \beta_{r}\right) \\
-    t_{1} = q_{x} + m_{1} q_{z} \\
+    m_{1} = \tan\left(\beta_{1}\right)
+    
+    m_{2} = \tan\left(\pi - \beta_{r}\right)
+
+    t_{1} = q_{x} + m_{1} q_{z}
+    
     t_{2} = q_{x} + m_{2} q_{z}
 $$
 
@@ -109,7 +112,7 @@ For CD-SAXS experiment, the algorithm starts with the experimental data collecte
 Afterwards, the calculated analytical Fourier transform is compared with the experimental data using a mean-absolute error log:
 
 $$
-    \Xi=\frac{1}{N_{\mathrm{q}}-1} \sum_{\mathbf{q}}\left|\log _{10} I_{\mathrm{Sim}}(\mathbf{q})-\log _{10} I(\mathbf{q})\right|
+    \Xi=\frac{1}{N_{q}-1} \sum_{q}\left|\log _{10} I_{Sim}(q)-\log _{10} I(q)\right|
 $$
 
 where $I_{\mathrm{Sim}}(\mathbf{q})$ is the simulated intensity and $I(\mathbf{q})$ is the experimental intensity.
