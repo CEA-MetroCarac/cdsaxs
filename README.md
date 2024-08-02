@@ -1,110 +1,131 @@
-# Critical Dimension Small Angle X-ray Scattering (cdsaxs) Package
+# Overview
 
-The `cdsaxs` package is a Python package for simulating and fitting cdsaxs data obtained from synchrotron experiments. This package is developed to help researchers extract the
-different parameters of the nanostructures from the experimental data. The collection of functions developed at CEA (French Alternative Energies and Atomic Energy Commission) by former PhD students and at
-Lawrence Berkeley National Laboratory and Brookhaven National Laboratory served as the foundation for this package[[1]](#references).
+
+Miniaturizing transistors, the building blocks of integrated circuits, presents significant challenges for the semiconductor industry. Precisely measuring these features during production is crucial for high-quality chips. Existing in-line metrology techniques, such as optical critical-dimension (OCD) scatterometry and critical-dimension scanning electron microscopy (CD-SEM), are nearing their limits. OCD struggles with the inherent limitations of light and shrinking features, while CD-SEM, despite providing valuable insights, is restricted by sampling area and resolution. To overcome these obstacles, the industry is exploring X-ray-based metrology. X-rays, with their shorter wavelengths, allow for more precise analysis and are sensitive to variations in composition, providing richer data.
+
+
+CD-SAXS (Critical Dimension Small Angle X-ray Scattering) is a promising technique for nano-structure electronics. It uses a transmission geometry, sending the beam through the sample and the 750 micrometer-thick silicon wafer. The x-ray spot size varies between 10-1000 μm, enabling the measurement of small patterned areas. Studies have shown CD-SAXS's effectiveness in characterizing the shape and spacing of nanometer-sized patterns.
+
+Although several big companies are developing software for CD-SAXS, this technique is still in its infancy and there isn't an open source coherent package available for its data analysis. Thus, this `cdsaxs` package is aimed at providing simulation and fitting tools for CD-SAXS synchotron data for researchers.
+
+The collection of [functions](https://github.com/Xi-CAM/Xi-cam.CDSAXS/blob/master/xicam/CDSAXS/cdsaxs.py) developed at CEA (French Alternative Energies and Atomic Energy Commission) by former PhD students and at Lawrence Berkeley National Laboratory and Brookhaven National Laboratory served as the foundation for this package.
+
 
 # Installation
-You can install the package by running the following command in the terminal:
+`cdsaxs` is available on PyPI and can be installed using pip. <span style="color:red">TODO: upload to PyPI</span>
+
+```bash
+pip install cdsaxs
+```
+
+Similiarly, you can also install the latest version from the GitHub repository using pip:
+
 ```bash
 pip install git+https://github.com/CEA-MetroCarac/cdsaxs.git
 ```
-Or you can clone the repository and install the package by running the following commands in the terminal:
+or clone the repository and install the package by running the following commands in the terminal:
 ```bash
 git clone https://github.com/CEA-MetroCarac/cdsaxs.git
 cd cdsaxs
 pip install .
 ```
-That way you'll have all the tests and examples available.
 
-# How to Use cdsaxs Package for Diffraction Simulation and Fitting
+# Background
 
-Below are the instructions on how to perform diffraction simulation and fitting using the cdsaxs fitting package.
+## Simulation models
 
-## Diffraction Simulation
 
-### Prepare the Data
+Two models were considered in the development of this code. The first model focuses on the cross section of a line in a line-space pattern. In this model, the cross section of a line is represented by a stack of trapezoids, which collectively form the shape of the cross section. This model is known as the Stacked Trapezoid Model.
 
-```python
-from cdsaxs_fitting.simulations.stacked_trapezoid import StackedTrapezoidSimulation
-import numpy as np
 
-# Define parameters
-pitch = 100  # nm distance between two trapezoidal bars
-qzs = np.linspace(-0.1, 0.1, 10)
-qxs = 2 * np.pi / pitch * np.ones_like(qzs)
-dwx = 0.1
-dwz = 0.1
-i0 = 10
-bkg = 0.1
-y1 = 0.
-height = [20.]
-bot_cd = 40.
-swa = [90.]
+| <img src="./assets/images/trapezoid.png" width="400"> |
+|:--:|
+| *SEM image in a) is a cross-section of a line in SEM image in b). The black trapezoidal shapes in a) represent the modelling done for this simulation.* |
 
-langle = np.deg2rad(np.asarray(swa))
-rangle = np.deg2rad(np.asarray(swa))
 
-# Simulation data
-i_params = {
-    'heights': np.asarray(height),
-    'langles': langle,
-    'rangles': rangle,
-    'y1': y1,
-    'bot_cd': bot_cd,
-    'dwx': dwx,
-    'dwz': dwz,
-    'i0': i0,
-    'bkg_cste': bkg
-}
+The second model introduces another concept known as the Strong Castle Model. This model builds upon the previous one by incorporating an additional nano-structure on top, resulting in an overlay. It provides a tool for representing the overlay between multiple structures.
 
-# Create instance of the Simulation class and call the simulation method
-Simulation1 = StackedTrapezoidSimulation(qys=qxs, qzs=qzs)
-intensity = Simulation1.simulate_diffraction(params=i_params)
-```
-Note: heights can be of format string in which case it will be supposed that all the trapezoids have the same height. If it is a list, then the heights of the trapezoids will be assigned according to the order of the list.
+|<img src="./assets/images/overlay.png" width="300">|
+|:--:|
+| *Strong castle model where top structure is not aligned thus we have an overlay.* |
 
-Also, if fit is for symmetric case rangles can be ommited from the dictionary above or set to ```None``` and the code will assume that rangles = langles.
+To calculate the intensity profile of the scattering pattern, we perform a Fourier transformation on each trapezoid and then add them. The Fourier transformation of a trapezoid can be expressed using the following equation:
 
-## Data Fitting
+$$
+    F\left(q_{x}, q_{z}\right)=\frac{1}{q_{x}}\left[-\frac{m_{1}}{t_{1}} e^{-i q_{x}\left(\frac{\omega_{0}}{2}\right)}\left(1-e^{-i h\left(\frac{q_{x}}{m_{1}}+q_{z}\right)}\right)\right. \\ +\frac{m_{2}}{t_{2}} e^{-i q_{x}\left(\frac{\omega_{0}}{2}\right)}\left(1-e^{\left.-i h\left(\frac{q_{x}}{m_{2}}+q_{z}\right)\right)}\right]
+$$
 
-### Prepare the Data
+where,
 
-```python
-from cdsaxs.fitter import Fitter
+$$m_{1} = \tan\left(\beta_{1}\right)$$
 
-# Initial parameters
-initial_params = {
-    'heights': {'value': height, 'variation': 10E-5},
-    'langles': {'value': langle, 'variation': 10E-5},
-    'rangles': {'value': rangle, 'variation': 10E-5},
-    'y1': {'value': y1, 'variation': 10E-5},
-    'bot_cd': {'value': bot_cd, 'variation': 10E-5},
-    'dwx': {'value': dwx, 'variation': 10E-5},
-    'dwz': {'value': dwz, 'variation': 10E-5},
-    'i0': {'value': i0, 'variation': 10E-5},
-    'bkg_cste': {'value': bkg, 'variation': 10E-5}
-}
+$$m_{2} = \tan\left(\pi - \beta_{r}\right)$$
 
-# Create instance of the Simulation class and pass it to the Fitter class along with data to fit
-Simulation2 = StackedTrapezoidSimulation(qys=qxs, qzs=qzs, initial_guess=initial_params)
-Fitter1 = Fitter(Simulation=Simulation2, exp_data=intensity)
-```
+$$t_{1} = q_{x} + m_{1} q_{z}$$
 
-### Fit the Data
+$$t_{2} = q_{x} + m_{2} q_{z}$$
 
-First you can do CMA-ES.
-#### CMA-ES
+$\beta$'s are the bottom side angles of the trapezoid. $q_{x} , q_{z}$ are the fourier space coordinates, $\omega_{0}$ is the width of the trapezoid and $h$ is the height of the trapezoid.
 
-```python
-cmaes = Fitter1.cmaes(sigma=100, ngen=10, popsize=10, mu=10, n_default=9, restarts=10, tolhistfun=10E-5, ftarget=10, restart_from_best=True, verbose=False, dir_save="./")
-```
-Then use MCMC method to give you statistics of the best fit.
-#### MCMC
+## Fitting algorithm
 
-```python
-mcmc = Fitter1.mcmc(N=9, sigma=np.asarray([100] * 9), nsteps=1000, nwalkers=18)
-```
+The intensity map obtained from psynchotron experiment looks like following:
 
-## References
-1. [Xi-cam cdsaxs repository](https://github.com/Xi-CAM/Xi-cam.CDSAXS/tree/master/xicam/CDSAXS)
+|<img src="./assets/images/rotation.png" width="400">|
+|:--:|
+| *Intensity map and vertical cut of corresponding bragg order* |
+
+
+Vertical cut along the different bragg order is made to get the intensity profile shown below the intensity map. These profiles are the experimental data that we want to fit.
+
+The objective of the fitting is to iterate over a high number of different line profile (represented as various combination of stacked trapezoids)
+and to converge towards the profile that its Fourier Transform will best match the experimental data. While the objective seems simple to describe, 
+the problem is complex. Traditional optimization methods used for refinement often fall short when dealing with 
+complex internal structures with numerous parameters, either being trapped in local minima or not converging toward the same solutions.
+
+Another challenge arises from the possibility of "degenerate" solutions. These occur when multiple structural 
+models can produce the same scattering data, making it difficult to pinpoint the true structure. This is a common 
+issue in scattering analysis.
+
+
+Therefore, the ideal scenario for CD-SAXS analysis involves an optimization algorithm that can consistently and 
+rapidly converge on the best possible fit for the data. While some prior knowledge about the underlying structure 
+can accelerate the process, such information is not always readily available. This highlights the need for more 
+efficient algorithms that can handle complex structures even with limited prior knowledge.
+
+Genetic and evolutionary algorithms have emerged as promising alternatives. These methods mimic biological evolution, 
+with the model parameters acting as the "genetic code." Starting with randomly generated parameters, these algorithms 
+iteratively refine them through a "mixing strategy" over multiple generations until the optimal set is found. This 
+approach excels at searching large parameter spaces with wide bounds, making it suitable for our purposes.
+
+### Covariance Matrix Adaptation Evolution Strategy (CMAES)
+
+One algorithm is the Covariance Matrix Adaptation Evolution Strategy (CMAES). This method is particularly 
+well-suited for high-dimensional optimization problems, making it ideal for complex nano-structure analysis. CMAES 
+operates by maintaining a population of candidate solutions, with each iteration generating new candidates based on 
+the previous generation performance. By adapting the covariance matrix of the candidate solutions, CMAES can efficiently 
+explore the parameter space and converge on the optimal solution. The implementation of [deap](https://deap.readthedocs.io/en/master/examples/cmaes.html) library is used for this purpose.
+
+For CD-SAXS experiment, the algorithm starts with the experimental data collected. Then, a series of in-depth line profile generated, through a set of parameters as describe earlier. 
+Afterwards, the calculated analytical Fourier transform is compared with the experimental data using a mean-absolute error log:
+
+$$\Xi=\frac{1}{N_{q}-1}\sum_{q}|\log_{10}I_{Sim}(q)-\log_{10}I(q)|$$
+
+where $I_{\mathrm{Sim}}(\mathbf{q})$ is the simulated intensity and $I(\mathbf{q})$ is the experimental intensity.
+$\Xi$ is called goodness of fit. The algorithm then tries to minimize $\Xi$ by adjusting the parameters of the model.
+
+We repeat this process until we are satisfied with the precision of the fit. The final set of parameters that gives the best fit and it's fitness value which is the output of the algorithm.
+
+
+### Monte Carlo Markov Chain (MCMC)
+
+The CMAES algorithm provides a single best-fit solution for the nano-structure parameters. However, it is essential to understand the uncertainty associated with these parameters.
+This uncertainty relates to the different possible combinations of parameters that could result in a similar goodness of fit. 
+For instance, decreasing slightly height of one trapezoid and increasing the height of another can result in a similar goodness of fit.
+To address this, we can use MCMC algorithm to explore and find all the sets of population that can result in the same goodness of fit. The [emcee](https://emcee.readthedocs.io/en/stable/) library was very handy for this purpose.
+
+Once all the population of possible solutions are found we can use it to obtain the statistical information about the parameters. Notably the uncertainty of the parameters using the confidence interval.
+
+# Examples 
+
+Please consult the [examples](https://github.com/CEA-MetroCarac/cdsaxs/tree/main/Examples) folder for more information on how to use the package.
