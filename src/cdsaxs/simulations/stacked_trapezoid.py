@@ -15,7 +15,6 @@ try:
     CUPY_AVAILABLE = True
 except ModuleNotFoundError:
     CUPY_AVAILABLE = False
-    cp = np
 
 
 from .base import Simulation, Geometry
@@ -61,7 +60,7 @@ class StackedTrapezoidSimulation(Simulation):
         self.TrapezoidGeometry = StackedTrapezoidGeometry(xp=self.xp, from_fitter=self.from_fitter, initial_guess=self.initial_guess)
         self.TrapezoidDiffraction = StackedTrapezoidDiffraction(TrapezoidGeometry=self.TrapezoidGeometry, xp=self.xp)
 
-    def simulate_diffraction(self, fitparams=None, fit_mode='cmaes', best_fit=None):
+    def simulate_diffraction(self, params=None, fit_mode='cmaes', best_fit=None):
         """Simulates the diffraction pattern of the stacked trapezoids.
 
         Args:
@@ -73,9 +72,9 @@ class StackedTrapezoidSimulation(Simulation):
             corrected_intensity (array-like): A 2D array of floats containing the corrected intensity.
         """
         if fit_mode == 'cmaes':
-            corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, fitparams=fitparams)
+            corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, fitparams=params)
         elif fit_mode == 'mcmc':
-            corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, fitparams=fitparams)
+            corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, fitparams=params)
 
         if not self.from_fitter:
             return corrected_intensity[0]
@@ -270,6 +269,12 @@ class StackedTrapezoidGeometry(Geometry):
         langles = df.filter(like='langle').values
         rangles = df.filter(like='rangle').values
 
+        # handling symmetric case
+        if langles.size == 0:
+            langles = rangles
+        if rangles.size == 0:
+            rangles = langles
+
         y1 = df.filter(like='y_start').values * self.xp.ones_like(langles)
         y2 = y1 + df.filter(like='bot_cd').values * self.xp.ones_like(langles)
 
@@ -294,6 +299,11 @@ class StackedTrapezoidGeometry(Geometry):
         """
         heights = df.filter(like='height').values
         langles = df.filter(like='langle').values
+        rangles = df.filter(like='rangle').values
+
+        # handling symmetric case
+        if langles.size == 0:
+            langles = rangles
 
         if heights.shape[1] == 1:
             shift = heights[:] * self.xp.arange(langles.shape[1])
@@ -365,6 +375,13 @@ class StackedTrapezoidDiffraction():
         heights = df.filter(like='height').values
         langles = df.filter(like='langle').values
         rangles = df.filter(like='rangle').values
+
+        # handling symmetric case
+        if langles.size == 0:
+            langles = rangles
+        if rangles.size == 0:
+            rangles = langles
+
 
         tan1 = self.xp.tan(langles)[:, :, self.xp.newaxis]
         tan2 = self.xp.tan(np.pi - rangles)[:, :, self.xp.newaxis]

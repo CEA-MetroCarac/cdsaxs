@@ -126,6 +126,6 @@ To address this, we can use MCMC algorithm to explore and find all the sets of p
 
 Once all the population of possible solutions are found we can use it to obtain the statistical information about the parameters. Notably the uncertainty of the parameters using the confidence interval.
 
-# Examples 
+# Tutorials 
 
 Please consult the [examples](https://github.com/CEA-MetroCarac/cdsaxs/tree/main/Examples) folder for more information on how to use the package.
