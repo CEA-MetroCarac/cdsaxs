@@ -388,7 +388,7 @@ class StackedTrapezoidDiffraction():
         val1 = qys + tan1 * qzs
         val2 = qys + tan2 * qzs
 
-        with np.errstate(divide='ignore'):
+        with np.errstate(divide='ignore', invalid='ignore'):
             form_factor = (tan1 * self.xp.exp(-1j * qys * y1[:, :, self.xp.newaxis]) *
                            (1 - self.xp.exp(-1j * heights[:, :, self.xp.newaxis] / tan1 * val1)) / val1)
             form_factor -= (tan2 * self.xp.exp(-1j * qys * y2[:, :, self.xp.newaxis]) *
