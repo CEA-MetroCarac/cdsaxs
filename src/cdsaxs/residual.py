@@ -74,9 +74,9 @@ class Residual:
         if not isinstance(fit_params, self.xp.ndarray):
             fit_params = self.xp.array(fit_params)
         if fit_params is not None and self.best_fit is not None:
-            qxfit = self.Simulation.simulate_diffraction(fitparams=fit_params, fit_mode=self.mfit_mode, best_fit=self.best_fit)
+            qxfit = self.Simulation.simulate_diffraction(params=fit_params, fit_mode=self.mfit_mode, best_fit=self.best_fit)
         elif fit_params is not None:
-            qxfit = self.Simulation.simulate_diffraction(fitparams=fit_params, fit_mode=self.mfit_mode)
+            qxfit = self.Simulation.simulate_diffraction(params=fit_params, fit_mode=self.mfit_mode)
 
         res = self.log_error(self.mdata, qxfit)
         

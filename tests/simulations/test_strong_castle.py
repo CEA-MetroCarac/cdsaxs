@@ -65,7 +65,7 @@ class TestStrongCastle:
             2705659.68913569,   577316.24962421
         ]
         
-        calculated_intensities = strong_castle_sim.simulate_diffraction(fitparams=overlay_params)
+        calculated_intensities = strong_castle_sim.simulate_diffraction(params=overlay_params)
         assert calculated_intensities == approx(expected_intensities, abs=0.1)
 
     def test_calculate_ycoords(self, strong_castle_geom, overlay_params):
