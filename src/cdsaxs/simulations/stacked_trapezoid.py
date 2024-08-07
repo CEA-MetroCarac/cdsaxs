@@ -271,12 +271,15 @@ class StackedTrapezoidGeometry(Geometry):
         y1 = df.filter(like='y_start').values
         y2 = y1 + df.filter(like='bot_cd').values
 
-        if self.xp == cp:
-            heights = cp.asarray(heights)
-            langles = cp.asarray(langles)
-            rangles = cp.asarray(rangles)
-            y1 = cp.asarray(y1)
-            y2 = cp.asarray(y2)
+        try:
+            if self.xp == cp:
+                heights = cp.asarray(heights)
+                langles = cp.asarray(langles)
+                rangles = cp.asarray(rangles)
+                y1 = cp.asarray(y1)
+                y2 = cp.asarray(y2)
+        except NameError:
+            pass
 
         # handling symmetric case
         if langles.size == 0:
@@ -315,10 +318,13 @@ class StackedTrapezoidGeometry(Geometry):
         if langles.size == 0:
             langles = rangles
         
-        if self.xp == cp:
-            heights = cp.asarray(heights)
-            langles = cp.asarray(langles)
-            rangles = cp.asarray(rangles)
+        try:
+            if self.xp == cp:
+                heights = cp.asarray(heights)
+                langles = cp.asarray(langles)
+                rangles = cp.asarray(rangles)
+        except NameError:
+            pass
 
         if heights.shape[1] == 1:
             shift = heights[:] * self.xp.arange(langles.shape[1])
@@ -366,17 +372,24 @@ class StackedTrapezoidDiffraction():
 
         shift = self.TrapezoidGeometry.calculate_shift(df=df)
         
-        if self.xp == cp:
-            shift = cp.asarray(shift)
-            qzs = cp.asarray(qzs)
+        try:
+            if self.xp == cp:
+                shift = cp.asarray(shift)
+                qzs = cp.asarray(qzs)
+        except NameError:
+            pass
 
         coeff = self.xp.exp(-1j * shift[:, :, self.xp.newaxis] * qzs)
 
         weight = df.get('weight', None)
 
         if weight is not None:
-            if self.xp == cp:
-                weight = cp.asarray(weight)
+            try:
+                if self.xp == cp:
+                    weight = cp.asarray(weight)
+            except NameError:
+                pass
+                
             coeff *= weight[:, self.xp.newaxis] * (1. + 1j)
 
 
@@ -406,14 +419,17 @@ class StackedTrapezoidDiffraction():
         if rangles.size == 0:
             rangles = langles
 
-        if self.xp == cp:
-            heights = cp.asarray(heights)
-            langles = cp.asarray(langles)
-            rangles = cp.asarray(rangles)
-            y1 = cp.asarray(y1)
-            y2 = cp.asarray(y2)
-            qys = cp.asarray(qys)
-            qzs = cp.asarray(qzs)
+        try:
+            if self.xp == cp:
+                heights = cp.asarray(heights)
+                langles = cp.asarray(langles)
+                rangles = cp.asarray(rangles)
+                y1 = cp.asarray(y1)
+                y2 = cp.asarray(y2)
+                qys = cp.asarray(qys)
+                qzs = cp.asarray(qzs)
+        except NameError:
+            pass
 
 
         tan1 = self.xp.tan(langles)[:, :, self.xp.newaxis]
@@ -450,13 +466,16 @@ class StackedTrapezoidDiffraction():
         scaling = df.filter(like='i0').values.flatten()
         bkg_cste = df.filter(like='bkg_cste').values.flatten()
 
-        if self.xp == cp:
-            dw_factorx = cp.asarray(dw_factorx)
-            dw_factorz = cp.asarray(dw_factorz)
-            scaling = cp.asarray(scaling)
-            bkg_cste = cp.asarray(bkg_cste)
-            qys = cp.asarray(qys)
-            qzs = cp.asarray(qzs)
+        try:
+            if self.xp == cp:
+                dw_factorx = cp.asarray(dw_factorx)
+                dw_factorz = cp.asarray(dw_factorz)
+                scaling = cp.asarray(scaling)
+                bkg_cste = cp.asarray(bkg_cste)
+                qys = cp.asarray(qys)
+                qzs = cp.asarray(qzs)
+        except NameError:
+            pass
 
         dw_array = self.xp.exp(-(qys * dw_factorx) ** 2 +
                             (qzs * dw_factorz) ** 2)
