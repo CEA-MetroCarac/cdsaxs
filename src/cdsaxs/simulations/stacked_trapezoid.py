@@ -268,6 +268,15 @@ class StackedTrapezoidGeometry(Geometry):
         heights = df.filter(like='height').values
         langles = df.filter(like='langle').values
         rangles = df.filter(like='rangle').values
+        y1 = df.filter(like='y_start').values
+        y2 = y1 + df.filter(like='bot_cd').values
+
+        if self.xp == cp:
+            heights = cp.asarray(heights)
+            langles = cp.asarray(langles)
+            rangles = cp.asarray(rangles)
+            y1 = cp.asarray(y1)
+            y2 = cp.asarray(y2)
 
         # handling symmetric case
         if langles.size == 0:
@@ -275,8 +284,9 @@ class StackedTrapezoidGeometry(Geometry):
         if rangles.size == 0:
             rangles = langles
 
-        y1 = df.filter(like='y_start').values * self.xp.ones_like(langles)
-        y2 = y1 + df.filter(like='bot_cd').values * self.xp.ones_like(langles)
+        y1 = y1 * self.xp.ones_like(langles)
+        y2 = y2 * self.xp.ones_like(langles)
+
 
         # calculate y1 and y2 for each trapezoid cumulatively using cumsum but need to preserve the first values
         # /!\ for 90 degrees, tan(90deg) is infinite so height/tan(90deg) is equal to zero up to the precision of 10E-14 only
@@ -304,6 +314,11 @@ class StackedTrapezoidGeometry(Geometry):
         # handling symmetric case
         if langles.size == 0:
             langles = rangles
+        
+        if self.xp == cp:
+            heights = cp.asarray(heights)
+            langles = cp.asarray(langles)
+            rangles = cp.asarray(rangles)
 
         if heights.shape[1] == 1:
             shift = heights[:] * self.xp.arange(langles.shape[1])
@@ -350,11 +365,20 @@ class StackedTrapezoidDiffraction():
         qzs = qzs[self.xp.newaxis, self.xp.newaxis, ...]
 
         shift = self.TrapezoidGeometry.calculate_shift(df=df)
+        
+        if self.xp == cp:
+            shift = cp.asarray(shift)
+            qzs = cp.asarray(qzs)
+
         coeff = self.xp.exp(-1j * shift[:, :, self.xp.newaxis] * qzs)
 
         weight = df.get('weight', None)
+
         if weight is not None:
+            if self.xp == cp:
+                weight = cp.asarray(weight)
             coeff *= weight[:, self.xp.newaxis] * (1. + 1j)
+
 
         return coeff
 
@@ -381,6 +405,15 @@ class StackedTrapezoidDiffraction():
             langles = rangles
         if rangles.size == 0:
             rangles = langles
+
+        if self.xp == cp:
+            heights = cp.asarray(heights)
+            langles = cp.asarray(langles)
+            rangles = cp.asarray(rangles)
+            y1 = cp.asarray(y1)
+            y2 = cp.asarray(y2)
+            qys = cp.asarray(qys)
+            qzs = cp.asarray(qzs)
 
 
         tan1 = self.xp.tan(langles)[:, :, self.xp.newaxis]
@@ -416,6 +449,14 @@ class StackedTrapezoidDiffraction():
         dw_factorz = df.filter(like='dwz').values.flatten()
         scaling = df.filter(like='i0').values.flatten()
         bkg_cste = df.filter(like='bkg_cste').values.flatten()
+
+        if self.xp == cp:
+            dw_factorx = cp.asarray(dw_factorx)
+            dw_factorz = cp.asarray(dw_factorz)
+            scaling = cp.asarray(scaling)
+            bkg_cste = cp.asarray(bkg_cste)
+            qys = cp.asarray(qys)
+            qzs = cp.asarray(qzs)
 
         dw_array = self.xp.exp(-(qys * dw_factorx) ** 2 +
                             (qzs * dw_factorz) ** 2)
