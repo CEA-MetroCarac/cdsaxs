@@ -81,7 +81,7 @@ class Residual:
         try:
             if self.xp == cp:
                 res = res.get()
-        except TypeError:
+        except (NameError, AttributeError) as error:
             pass
 
         if self.mfit_mode == 'cmaes':
@@ -112,10 +112,13 @@ class Residual:
             numpy.ndarray
                 Difference between experimental and simulated data using the log error.
         """
-        if self.xp == cp:
-            exp_i_array = cp.asarray(exp_i_array)
-            sim_i_array = cp.asarray(sim_i_array)
-        
+        try:
+            if self.xp == cp:
+                exp_i_array = cp.asarray(exp_i_array)
+                sim_i_array = cp.asarray(sim_i_array)
+        except NameError:
+            pass
+            
         exp_i_array = self.xp.where(exp_i_array < 0, self.xp.nan, exp_i_array)
         
         exp_i_array = exp_i_array[self.xp.newaxis, ...]
