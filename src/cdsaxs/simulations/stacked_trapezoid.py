@@ -15,7 +15,6 @@ try:
     CUPY_AVAILABLE = True
 except ModuleNotFoundError:
     CUPY_AVAILABLE = False
-    cp = np
 
 
 from .base import Simulation, Geometry
@@ -61,7 +60,7 @@ class StackedTrapezoidSimulation(Simulation):
         self.TrapezoidGeometry = StackedTrapezoidGeometry(xp=self.xp, from_fitter=self.from_fitter, initial_guess=self.initial_guess)
         self.TrapezoidDiffraction = StackedTrapezoidDiffraction(TrapezoidGeometry=self.TrapezoidGeometry, xp=self.xp)
 
-    def simulate_diffraction(self, fitparams=None, fit_mode='cmaes', best_fit=None):
+    def simulate_diffraction(self, params=None, fit_mode='cmaes', best_fit=None):
         """Simulates the diffraction pattern of the stacked trapezoids.
 
         Args:
@@ -73,9 +72,9 @@ class StackedTrapezoidSimulation(Simulation):
             corrected_intensity (array-like): A 2D array of floats containing the corrected intensity.
         """
         if fit_mode == 'cmaes':
-            corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, fitparams=fitparams)
+            corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, fitparams=params)
         elif fit_mode == 'mcmc':
-            corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, fitparams=fitparams)
+            corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, fitparams=params)
 
         if not self.from_fitter:
             return corrected_intensity[0]
@@ -269,9 +268,28 @@ class StackedTrapezoidGeometry(Geometry):
         heights = df.filter(like='height').values
         langles = df.filter(like='langle').values
         rangles = df.filter(like='rangle').values
+        y1 = df.filter(like='y_start').values
+        y2 = y1 + df.filter(like='bot_cd').values
 
-        y1 = df.filter(like='y_start').values * self.xp.ones_like(langles)
-        y2 = y1 + df.filter(like='bot_cd').values * self.xp.ones_like(langles)
+        try:
+            if self.xp == cp:
+                heights = cp.asarray(heights)
+                langles = cp.asarray(langles)
+                rangles = cp.asarray(rangles)
+                y1 = cp.asarray(y1)
+                y2 = cp.asarray(y2)
+        except NameError:
+            pass
+
+        # handling symmetric case
+        if langles.size == 0:
+            langles = rangles
+        if rangles.size == 0:
+            rangles = langles
+
+        y1 = y1 * self.xp.ones_like(langles)
+        y2 = y2 * self.xp.ones_like(langles)
+
 
         # calculate y1 and y2 for each trapezoid cumulatively using cumsum but need to preserve the first values
         # /!\ for 90 degrees, tan(90deg) is infinite so height/tan(90deg) is equal to zero up to the precision of 10E-14 only
@@ -294,6 +312,19 @@ class StackedTrapezoidGeometry(Geometry):
         """
         heights = df.filter(like='height').values
         langles = df.filter(like='langle').values
+        rangles = df.filter(like='rangle').values
+
+        # handling symmetric case
+        if langles.size == 0:
+            langles = rangles
+        
+        try:
+            if self.xp == cp:
+                heights = cp.asarray(heights)
+                langles = cp.asarray(langles)
+                rangles = cp.asarray(rangles)
+        except NameError:
+            pass
 
         if heights.shape[1] == 1:
             shift = heights[:] * self.xp.arange(langles.shape[1])
@@ -340,11 +371,27 @@ class StackedTrapezoidDiffraction():
         qzs = qzs[self.xp.newaxis, self.xp.newaxis, ...]
 
         shift = self.TrapezoidGeometry.calculate_shift(df=df)
+        
+        try:
+            if self.xp == cp:
+                shift = cp.asarray(shift)
+                qzs = cp.asarray(qzs)
+        except NameError:
+            pass
+
         coeff = self.xp.exp(-1j * shift[:, :, self.xp.newaxis] * qzs)
 
         weight = df.get('weight', None)
+
         if weight is not None:
+            try:
+                if self.xp == cp:
+                    weight = cp.asarray(weight)
+            except NameError:
+                pass
+                
             coeff *= weight[:, self.xp.newaxis] * (1. + 1j)
+
 
         return coeff
 
@@ -366,12 +413,31 @@ class StackedTrapezoidDiffraction():
         langles = df.filter(like='langle').values
         rangles = df.filter(like='rangle').values
 
+        # handling symmetric case
+        if langles.size == 0:
+            langles = rangles
+        if rangles.size == 0:
+            rangles = langles
+
+        try:
+            if self.xp == cp:
+                heights = cp.asarray(heights)
+                langles = cp.asarray(langles)
+                rangles = cp.asarray(rangles)
+                y1 = cp.asarray(y1)
+                y2 = cp.asarray(y2)
+                qys = cp.asarray(qys)
+                qzs = cp.asarray(qzs)
+        except NameError:
+            pass
+
+
         tan1 = self.xp.tan(langles)[:, :, self.xp.newaxis]
         tan2 = self.xp.tan(np.pi - rangles)[:, :, self.xp.newaxis]
         val1 = qys + tan1 * qzs
         val2 = qys + tan2 * qzs
 
-        with np.errstate(divide='ignore'):
+        with np.errstate(divide='ignore', invalid='ignore'):
             form_factor = (tan1 * self.xp.exp(-1j * qys * y1[:, :, self.xp.newaxis]) *
                            (1 - self.xp.exp(-1j * heights[:, :, self.xp.newaxis] / tan1 * val1)) / val1)
             form_factor -= (tan2 * self.xp.exp(-1j * qys * y2[:, :, self.xp.newaxis]) *
@@ -399,6 +465,17 @@ class StackedTrapezoidDiffraction():
         dw_factorz = df.filter(like='dwz').values.flatten()
         scaling = df.filter(like='i0').values.flatten()
         bkg_cste = df.filter(like='bkg_cste').values.flatten()
+
+        try:
+            if self.xp == cp:
+                dw_factorx = cp.asarray(dw_factorx)
+                dw_factorz = cp.asarray(dw_factorz)
+                scaling = cp.asarray(scaling)
+                bkg_cste = cp.asarray(bkg_cste)
+                qys = cp.asarray(qys)
+                qzs = cp.asarray(qzs)
+        except NameError:
+            pass
 
         dw_array = self.xp.exp(-(qys * dw_factorx) ** 2 +
                             (qzs * dw_factorz) ** 2)

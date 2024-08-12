@@ -53,10 +53,10 @@ class Residual:
 
         self.mdata = data
         self.mfit_mode = fit_mode
-        self.xp = xp
         self.Simulation = Simulation
         self.c = c
         self.best_fit = best_fit
+        self.xp = self.Simulation.xp if self.Simulation is not None else xp
 
 
     def __call__(self, fit_params):
@@ -71,19 +71,17 @@ class Residual:
             numpy.ndarray or float
                 Residual value(s) between experimental and simulated data.
         """
-        if not isinstance(fit_params, self.xp.ndarray):
-            fit_params = self.xp.array(fit_params)
         if fit_params is not None and self.best_fit is not None:
-            qxfit = self.Simulation.simulate_diffraction(fitparams=fit_params, fit_mode=self.mfit_mode, best_fit=self.best_fit)
+            qxfit = self.Simulation.simulate_diffraction(params=fit_params, fit_mode=self.mfit_mode, best_fit=self.best_fit)
         elif fit_params is not None:
-            qxfit = self.Simulation.simulate_diffraction(fitparams=fit_params, fit_mode=self.mfit_mode)
+            qxfit = self.Simulation.simulate_diffraction(params=fit_params, fit_mode=self.mfit_mode)
 
         res = self.log_error(self.mdata, qxfit)
         
         try:
             if self.xp == cp:
                 res = res.get()
-        except:
+        except (NameError, AttributeError) as error:
             pass
 
         if self.mfit_mode == 'cmaes':
@@ -114,6 +112,13 @@ class Residual:
             numpy.ndarray
                 Difference between experimental and simulated data using the log error.
         """
+        try:
+            if self.xp == cp:
+                exp_i_array = cp.asarray(exp_i_array)
+                sim_i_array = cp.asarray(sim_i_array)
+        except NameError:
+            pass
+            
         exp_i_array = self.xp.where(exp_i_array < 0, self.xp.nan, exp_i_array)
         
         exp_i_array = exp_i_array[self.xp.newaxis, ...]

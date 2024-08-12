@@ -21,7 +21,7 @@ class Geometry(Protocol):
             returns:
             df (pandas.DataFrame): a DataFrame containing the fitparams in a readable format.
         """
-        raise NotImplementedError("Subclasses must implement this method")
+        ...
 
 
 class Simulation(Protocol):
@@ -40,7 +40,7 @@ class Simulation(Protocol):
             like saving the initial guess given by user to a dataframe.
 
         """
-        raise NotImplementedError("Subclasses must implement this method")
+        ...
 
     def simulate_diffraction(
         self, fitparams=None, fit_mode='cmaes', best_fit=None
@@ -51,4 +51,4 @@ class Simulation(Protocol):
         Raises:
             NotImplementedError: _description_
         """
-        raise NotImplementedError("Subclasses must implement this method")
+        ...

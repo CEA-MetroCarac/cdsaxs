@@ -8,7 +8,7 @@ def test_residual(params, initial_params, qzs_qys ):
     qzs, qys = qzs_qys
 
     Simulation = StackedTrapezoidSimulation(qzs=qzs, qys=qys)
-    intensity = Simulation.simulate_diffraction(fitparams=params)
+    intensity = Simulation.simulate_diffraction(params=params)
  
     Simulation1 = StackedTrapezoidSimulation(qzs=qzs, qys=qys, initial_guess=initial_params)
     Simulation1.set_from_fitter(True)

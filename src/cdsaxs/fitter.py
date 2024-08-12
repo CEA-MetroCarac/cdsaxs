@@ -348,11 +348,12 @@ class Fitter:
 
         if gaussian_move:
             # Use Gaussian move for the proposal distribution
-            individuals = [np.random.uniform(-100, 100, N) for _ in range(nwalkers)]
+            individuals = [np.random.uniform(-sigma, sigma, N) for _ in range(nwalkers)]
             
             Sampler = emcee.EnsembleSampler(nwalkers, N, residual, moves=emcee.moves.GaussianMove(sigma), pool=None, vectorize=True)
 
-            Sampler.run_mcmc(individuals, nsteps, progress=True)
+            with np.errstate(divide='ignore', invalid='ignore'):    
+                Sampler.run_mcmc(individuals, nsteps, progress=True)
 
             if verbose:
                 do_verbose(Sampler)
@@ -360,8 +361,9 @@ class Fitter:
 
             individuals = [np.random.default_rng().normal(loc=0, scale=sigma, size=sigma.shape) for _ in range(nwalkers)]
             Sampler = emcee.EnsembleSampler(nwalkers, N, residual, pool=None, vectorize=True)
-                
-            Sampler.run_mcmc(individuals, nsteps, progress=True)
+
+            with np.errstate(divide='ignore', invalid='ignore'): 
+                Sampler.run_mcmc(individuals, nsteps, progress=True)
 
             if verbose:
                 do_verbose(Sampler)
