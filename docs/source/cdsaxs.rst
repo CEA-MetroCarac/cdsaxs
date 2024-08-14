@@ -27,11 +27,3 @@ cdsaxs.residual module
    :members:
    :undoc-members:
    :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: cdsaxs
-   :members:
-   :undoc-members:
-   :show-inheritance:

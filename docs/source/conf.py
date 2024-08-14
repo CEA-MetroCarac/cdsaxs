@@ -7,7 +7,12 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 import os
 import sys
+
 sys.path.insert(0, os.path.abspath('../../'))  # Adjust the path as needed
+
+html_extra_path = [
+    os.path.abspath('../../assets/images'),os.path.abspath('../../Tutorials')   # Absolute path to your images directory
+]
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -17,7 +22,16 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.napoleon',  # To support Google and NumPy style docstrings
     'sphinx_rtd_theme',
+    'sphinx.ext.mathjax',
+    'nbsphinx',
+    'sphinx.ext.viewcode',
+    'sphinx.ext.todo',
 ]
+
+#nbshpinx configuration
+nbsphinx_allow_errors = True  # Continue rendering even if there are errors in the notebooks
+nbsphinx_execute = 'never'    # Don't execute the notebooks on build; use the pre-executed output
+
 
 # Generate autosummary pages automatically
 autosummary_generate = True
@@ -44,7 +58,7 @@ exclude_patterns = []
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'sphinx_rtd_theme'
-html_static_path = ['_static']
+
 html_theme_options = {
     # Toc options
     'collapse_navigation': True,
@@ -53,3 +67,6 @@ html_theme_options = {
     'includehidden': True,
     'titles_only': False,
 }
+
+
+html_static_path = ['_static']

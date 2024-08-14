@@ -1,37 +1,29 @@
 cdsaxs
 ======
 
-Subpackages
------------
-
-.. toctree::
-   :maxdepth: 4
-
-   cdsaxs.simulations
-
 Submodules
 ----------
 
-cdsaxs.fitter module
---------------------
+fitter
+^^^^^^^
 
 .. automodule:: cdsaxs.fitter
    :members:
    :undoc-members:
    :show-inheritance:
 
-cdsaxs.residual module
-----------------------
+residual
+^^^^^^^^
 
 .. automodule:: cdsaxs.residual
    :members:
    :undoc-members:
    :show-inheritance:
 
-Module contents
----------------
+Subpackages
+-----------
 
-.. automodule:: cdsaxs
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. toctree::
+   :maxdepth: 2
+
+   cdsaxs.simulations
