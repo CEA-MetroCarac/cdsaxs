@@ -12,25 +12,111 @@ The collection of `functions <https://github.com/Xi-CAM/Xi-cam.CDSAXS/blob/maste
 Installation
 ============
 
-``cdsaxs`` is available on PyPI and can be installed using pip. **TODO: upload to PyPI**
+.. note::
+    cdsaxs can currently be used on Python >=3.8, 3.9, 3.10, 3.11 and 3.12.
 
-.. code-block:: bash
+cdsaxs is available to install through :code:`pip`:
 
-    pip install cdsaxs
+.. code-block:: shell
+    
+    # Within a venv:
+    (cdsaxs-venv) $ pip install cdsaxs
 
-Similarly, you can also install the latest version from the GitHub repository using pip:
 
-.. code-block:: bash
+and :code:`conda` (via conda-forge):
 
-    pip install git+https://github.com/CEA-MetroCarac/cdsaxs.git
+.. code-block:: shell
+    
+    # Within a conda env:
+    (cdsaxs) $ conda install -c conda-forge cdsaxs
 
-or clone the repository and install the package by running the following commands in the terminal:
 
-.. code-block:: bash
+Creating an isolated Python environment
+---------------------------------------
 
-    git clone https://github.com/CEA-MetroCarac/cdsaxs.git
-    cd cdsaxs
-    pip install .
+It is good practice to use a dedicated virtual environment for cdsaxs
+and its dependencies to avoid affecting other environments on your system.
+To achieve this you can use a virtualenv or a conda environment, according
+to preference.
+
+Using virtualenv
+^^^^^^^^^^^^^^^^
+
+You can use `virtualenv <https://virtualenv.pypa.io/>`_ or `venv
+<https://docs.python.org/3/tutorial/venv.html>`_ if you have a system-wide
+compatible Python installation. For Mac OS X, using `conda`_ is recommended.
+
+To create a new virtualenv for cdsaxs, you can use the following command:
+
+.. code-block:: shell
+
+    $ virtualenv -p python3 ~/cdsaxs-venv/
+
+If multiple Python versions are installed, replace :code:`python3` with 
+:code:`python3.9` or a later version.
+
+Replace :code:`~/cdsaxs-venv/` with any path where you would like to create
+the venv. You can then activate the virtualenv with
+
+.. code-block:: shell
+
+    $ source ~/cdsaxs-venv/bin/activate
+
+Afterwards, your shell prompt should be prefixed with :code:`(cdsaxs-venv)` to
+indicate that the environment is active:
+
+.. code-block:: shell
+
+    (cdsaxs-venv) $
+
+Now the environment is ready to install cdsaxs using
+the :code:`pip` command at the top of this page.
+
+For more information about virtualenv, for example if you are using a shell
+without :code:`source`, please `refer to the virtualenv documentation
+<https://virtualenv.pypa.io/en/stable/user_guide.html>`_. If you are often
+working with virtualenvs, using a convenience wrapper like `virtualenvwrapper
+<https://virtualenvwrapper.readthedocs.io/en/latest/>`_ is recommended.
+
+.. _`conda`:
+
+Using conda
+^^^^^^^^^^^
+
+If you are already using conda, or if you don't have a system-wide compatible
+Python installation, you can create a conda environment for cdsaxs.
+
+This section assumes that you have `installed anaconda or miniconda
+<https://conda.io/projects/conda/en/latest/user-guide/install/index.html#regular-installation>`_
+and that your installation is working.
+
+You can create a new conda environment to install cdsaxs with the following
+command:
+
+.. code-block:: shell
+
+    $ conda create -n cdsaxs python=3.11
+
+Activate the environment with the following command:
+
+.. code-block:: shell
+
+    $ conda activate cdsaxs
+
+Afterwards, your shell prompt should be prefixed with :code:`(cdsaxs)` to
+indicate that the environment is active:
+
+.. code-block:: shell
+
+    (cdsaxs) $
+
+Now the environment is ready to install cdsaxs using
+the :code:`conda` command at the top of this page.
+
+For more information about conda, see their `documentation about creating and
+managing environments
+<https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html>`_.
+
 
 Background
 ==========

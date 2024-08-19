@@ -12,15 +12,13 @@ cdsaxs documentation
 
    introduction
    tutorials
-   .. installation
-   .. dependencies
-   .. Developers
+   modules
 
 .. toctree::
    :maxdepth: 2
-   :caption: Api Reference:
+   :caption: For Developers:
 
-   modules
+   for_developpers
 
 Indices and tables
 ==================
