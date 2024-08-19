@@ -117,6 +117,14 @@ For more information about conda, see their `documentation about creating and
 managing environments
 <https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html>`_.
 
+Optional dependencies
+---------------------
+
+The `cdsaxs` package is designed to work with `cupy` for GPU acceleration. To install the optional dependencies, use the following command:
+
+.. code-block:: shell
+
+    (cdsaxs) $ pip install cdsaxs[gpu]
 
 Background
 ==========
