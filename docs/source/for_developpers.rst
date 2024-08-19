@@ -195,3 +195,14 @@ By following these guidelines, you can develop a new simulation model that integ
 For getting concrete examples, you can refer to the existing models in the `cdsaxs` package, such as the Stacked Trapezoid and Strong Castle models. 
 
 
+Testing
+=======
+
+Pytest is used for testing the codebase. The tests are located in the `tests` directory and are organized by module. When adding new features or modifying existing code, 
+it is essential to write tests and check that the existing tests pass.
+
+To run the tests, navigate to the root directory of the project and execute the following command:
+
+.. code-block:: shell
+
+    (cdsaxs) $ pytest
