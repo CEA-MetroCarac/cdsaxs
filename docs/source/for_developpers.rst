@@ -120,5 +120,78 @@ The model, meaning specific implementations of the interfaces, is designed to op
 
 
 
+============================
+Creating a New Simulation Model
+============================
+
+This document provides guidelines on how to develop a new simulation model that adheres to the established protocol. The protocol ensures compatibility between your simulation model and the fitter class, enabling seamless integration and functionality.
+
+Overview
+--------
+
+The protocol consists of a set of methods and properties that your `Simulation` and `Geometry` classes must implement. These classes form the core of your simulation model, handling the setup, execution, and data management for your simulations.
+
+Key Components
+--------------
+
+1. **Geometry Class**
+
+   The `Geometry` class is responsible for defining the shape and structure of the system being simulated. It includes methods for converting simulation parameters into a structured format that can be used by the simulation engine.
+
+   - **convert_to_dataframe(fitparams)**: This method takes a list of fitting parameters (fitparams) and converts them into a pandas DataFrame. This DataFrame should be structured based on the initial guess values provided by the user.
+
+     - **Parameters**:
+       - `fitparams (list)`: Array containing the parameters returned by the fitter.
+
+     - **Returns**:
+       - `pandas.DataFrame`: A DataFrame containing the parameters in a readable format.
+
+2. **Simulation Class**
+
+   The `Simulation` class orchestrates the simulation process. It uses the `Geometry` class to manage system structure and executes the core simulation logic.
+
+   - **geometry (property)**: This property returns an instance of the `Geometry` class, providing access to the geometric data of the system.
+
+   - **set_from_fitter(from_fitter)**: This method configures the simulation to recognize that the incoming data originates from a fitter object. It should also initialize necessary components, such as saving the initial guess to a DataFrame.
+
+     - **Parameters**:
+       - `from_fitter (bool)`: Indicates whether the simulation is being driven by a fitter.
+
+   - **simulate_diffraction(fitparams=None, fit_mode='cmaes', best_fit=None)**: This method performs the actual simulation, generating the diffraction pattern or other relevant output based on the provided fitting parameters.
+
+     - **Parameters**:
+       - `fitparams (list, optional)`: Parameters for the simulation, typically obtained from a fitter.
+       - `fit_mode (str, optional)`: Specifies the fitting method used ('cmaes' or 'mcmc').
+       - `best_fit (array-like, optional)`: The best-fitting parameters obtained from the fitter.
+
+     - **Raises**:
+       - `NotImplementedError`: If the method is not implemented in the derived class.
+
+Developing a New Model
+======================
+
+To develop a new model, you need to create classes that inherit from the `Simulation` and `Geometry` protocols and implement all required methods. Here's how to approach this:
+
+1. **Define the Geometry**
+
+   Create a class that implements the `Geometry` protocol. This class should define the specific geometric properties of the system being simulated. For example, in a model of stacked trapezoids, this class would define the dimensions, angles, and positions of the trapezoids.
+
+   Implement the `convert_to_dataframe` method to organize the input parameters into a structured format suitable for the simulation. This method is crucial for ensuring that the parameters can be easily interpreted and manipulated by the `Fitter` class.
+
+2. **Create the Simulation Class**
+
+   Your simulation class should inherit from the `Simulation` protocol. This class is where the core logic of your simulation resides. It should use the geometric data from the `Geometry` class to set up and run the simulation.
+
+   Ensure that the `simulate_diffraction` method is implemented to perform the simulation. Depending on the complexity of your model, this method might involve extensive calculations or integrations.
+
+3. **Integration with the Fitter**
+
+   If your simulation will be used in conjunction with a fitter (e.g., for parameter optimization), make sure to implement the `set_from_fitter` method. This will enable your simulation to correctly handle data provided by the fitter and return results in a format that the fitter can use.
+
+Conclusion
+----------
+
+By following these guidelines, you can develop a new simulation model that integrates smoothly with the existing framework. The key is to ensure that all required methods and properties are properly implemented, allowing your model to function seamlessly within the larger simulation and fitting ecosystem.
+For getting concrete examples, you can refer to the existing models in the `cdsaxs` package, such as the Stacked Trapezoid and Strong Castle models. 
 
 
