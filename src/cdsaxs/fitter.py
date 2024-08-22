@@ -41,7 +41,7 @@ class Fitter:
     Attributes:
         Simulation (Simulation): An instance of the Simulation class representing the simulated diffraction pattern.
         exp_data (numpy.ndarray): Experimental diffraction data.
-        xp (module): NumPy or CuPy module, depending on whether GPU acceleration is used.
+        np (module): NumPy or CuPy module, depending on whether GPU acceleration is used.
         best_fit_cmaes (list or None): List containing the best fit parameters obtained using the CMA-ES algorithm.
 
     Methods:
@@ -136,21 +136,21 @@ class Fitter:
         halloffame = tools.HallOfFame(1)
 
         thestats = tools.Statistics(lambda ind: ind.fitness.values)
-        thestats.register('avg', lambda x: xp.mean(xp.asarray(x)[xp.isfinite(xp.asarray(x))]) \
-            if xp.asarray(x)[xp.isfinite(xp.asarray(x))].size != 0 else None)
-        thestats.register('std', lambda x: xp.std(xp.asarray(x)[xp.isfinite(xp.asarray(x))]) \
-            if xp.asarray(x)[xp.isfinite(xp.asarray(x))].size != 0 else None)
-        thestats.register('min', lambda x: xp.min(xp.asarray(x)[xp.isfinite(xp.asarray(x))]) \
-            if xp.asarray(x)[xp.isfinite(xp.asarray(x))].size != 0 else None)
-        thestats.register('max', lambda x: xp.max(xp.asarray(x)[xp.isfinite(xp.asarray(x))]) \
-            if xp.asarray(x)[xp.isfinite(xp.asarray(x))].size != 0 else None)
-        thestats.register('fin', lambda x: xp.sum(xp.isfinite(xp.asarray(x))) / xp.size(xp.asarray(x)))
+        thestats.register('avg', lambda x: np.mean(np.asarray(x)[np.isfinite(np.asarray(x))]) \
+            if np.asarray(x)[np.isfinite(np.asarray(x))].size != 0 else None)
+        thestats.register('std', lambda x: np.std(np.asarray(x)[np.isfinite(np.asarray(x))]) \
+            if np.asarray(x)[np.isfinite(np.asarray(x))].size != 0 else None)
+        thestats.register('min', lambda x: np.min(np.asarray(x)[np.isfinite(np.asarray(x))]) \
+            if np.asarray(x)[np.isfinite(np.asarray(x))].size != 0 else None)
+        thestats.register('max', lambda x: np.max(np.asarray(x)[np.isfinite(np.asarray(x))]) \
+            if np.asarray(x)[np.isfinite(np.asarray(x))].size != 0 else None)
+        thestats.register('fin', lambda x: np.sum(np.isfinite(np.asarray(x))) / np.size(np.asarray(x)))
 
         # thestats.register('cumtime', lambda x: time.perf_counter() - last_time)
         logbook = tools.Logbook()
         logbook.header = ['gen', 'nevals'] + (thestats.fields if thestats else [])
         population_list = []
-        popsize_default = int(4 + 3 * xp.log(n_default))
+        popsize_default = int(4 + 3 * np.log(n_default))
         kwargs = {'lambda_': popsize if popsize is not None else popsize_default}
         if mu is not None:
             kwargs['mu'] = mu
@@ -189,7 +189,7 @@ class Fitter:
             lambda_ = kwargs['lambda_']
             toolbox.register('generate', strategy.generate, creator.Individual)
             toolbox.register('update', strategy.update)
-            maxlen = 10 + int(xp.ceil(30 * n_default / lambda_))
+            maxlen = 10 + int(np.ceil(30 * n_default / lambda_))
             last_best_fitnesses = deque(maxlen=maxlen)
             cur_gen = 0
             # fewer generations when popsize is doubled
@@ -228,19 +228,31 @@ class Fitter:
                 morestats['ps'].append(strategy.ps)
 
                 last_best_fitnesses.append(record['min'])
-                if (ftarget is not None) and record['min'] <= ftarget:
-                    if verbose:
-                        print(msg.format("ftarget", cur_gen))
-                    allbreak = True
-                    break
+
+                if record['min'] is not None:
+                    if (ftarget is not None) and record['min'] <= ftarget:
+                        if verbose:
+                            print(msg.format("ftarget", cur_gen))
+                        allbreak = True
+                        break
+                else:
+                    # print("Warning: All fitness values are non-finite in generation", cur_gen)
+                    pass
+                
+
+                last_best_fitnesses.append(record['min'])
                 if last_best_fitnesses[-1] is None:
                     last_best_fitnesses.pop()
-                    pass
-                delta = max(last_best_fitnesses) - min(last_best_fitnesses)
+
+                if np.all( np.asarray(last_best_fitnesses) ):
+                    delta = max(last_best_fitnesses) - min(last_best_fitnesses)
+                    cond3 = delta < tolhistfun  # Check if this condition is met
+                else:
+                    delta = None
+                    cond3 = False  # No valid fitnesses to compare, so do not terminate based on this criterion
 
                 cond1 = tolhistfun is not None
                 cond2 = len(last_best_fitnesses) == last_best_fitnesses.maxlen
-                cond3 = delta < tolhistfun
 
                 if cond1 and cond2 and cond3:
                     print(msg.format("tolhistfun", cur_gen))
@@ -266,16 +278,22 @@ class Fitter:
 
         if test:
             return best_corr
-        
-        if dir_save is not None:
-        
-            #convert in to right format
-            population_arr = self.xp.asarray(
-            [list(individual) for generation in population_list for individual in
-            generation])
 
-            fitness_arr = self.xp.asarray(
-            [individual.fitness.values[0] for generation in population_list for individual in
+        fitness_arr = np.asarray(
+        [individual.fitness.values[0] for generation in population_list for individual in
+        generation])
+
+        #count how many infs in the fitness_arr
+        n_infs = np.sum(np.isinf(fitness_arr))
+        
+        if(n_infs / fitness_arr.shape[0] > 0.5):
+            print('Warning: More than 50% of your generated populations are invalid individuals. It could be because your sigma or variation is too large, resulting in invalid parameters, consider choosing them wisely.')
+
+        if dir_save is not None:
+            
+            #convert in to right format
+            population_arr = np.asarray(
+            [list(individual) for generation in population_list for individual in
             generation])
 
             self.save_population(population_arr, fitness_arr, dir_save, fit_mode='cmaes')
@@ -320,9 +338,9 @@ class Fitter:
 
         def do_verbose(Sampler):
             if hasattr(Sampler, 'acceptance_fraction'):
-                print('Acceptance fraction: ' + str(xp.mean(Sampler.acceptance_fraction)))
+                print('Acceptance fraction: ' + str(np.mean(Sampler.acceptance_fraction)))
             else:
-                print('Acceptance fraction: ' + str(xp.mean([Sampler.acceptance_fraction for Sampler in Sampler])))
+                print('Acceptance fraction: ' + str(np.mean([Sampler.acceptance_fraction for Sampler in Sampler])))
             sys.stdout.flush()
         
         # Empirical factor to modify MCMC acceptance rate
@@ -331,14 +349,14 @@ class Fitter:
         # Generate a random seed if none is provided
         if seed is None:
             seed = randrange(2 ** 32)
-        xp.random.seed(seed)
+        np.random.seed(seed)
         
         if not hasattr(sigma, '__len__'):
             sigma = [sigma] * N
             
             print('{} parameters'.format(N))
 
-        sigma = xp.array(sigma)
+        sigma = np.array(sigma)
 
         try:
             if isinstance(sigma, cp.ndarray):
@@ -380,9 +398,9 @@ class Fitter:
         # Data processing and analysis
         s = Sampler.get_chain(discard=burnin).shape
 
-        flatchain = xp.transpose(Sampler.get_chain(discard=burnin), axes=[1, 0, 2]).reshape(s[0] * s[1], s[2])
+        flatchain = np.transpose(Sampler.get_chain(discard=burnin), axes=[1, 0, 2]).reshape(s[0] * s[1], s[2])
         flatlnprobability = Sampler.get_log_prob(discard=burnin).transpose().flatten()
-        minfitness_each_gen = xp.min(-1  * Sampler.get_log_prob(discard=burnin) * c, axis=0)
+        minfitness_each_gen = np.min(-1  * Sampler.get_log_prob(discard=burnin) * c, axis=0)
         
         #convert log probability to usual fitness
         flatfitness = -flatlnprobability * c
