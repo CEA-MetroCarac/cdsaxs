@@ -48,7 +48,7 @@ master_doc = 'index'
 project = 'cdsaxs'
 copyright = '2024, Nischal Dhungana'
 author = 'Nischal Dhungana'
-release = 'v1.0.0'
+release = 'v0.0.1'
 
 
 templates_path = ['_templates']

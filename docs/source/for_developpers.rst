@@ -51,13 +51,13 @@ With the Python environment activated (using conda or virtualenv), navigate to t
 
     (cdsaxs) $ python -m pip install -e .
 
-This command installs cdsaxs and its dependencies in your environment. For additional guidance, refer to the :ref:`usage documentation`.
+This command installs cdsaxs and its dependencies in your environment.
 
 To install extra dependencies, use the same command format as you would when installing cdsaxs from PyPI:
 
 .. code-block:: shell
 
-    (cdsaxs) $ python -m pip install -e .[cupy]
+    (cdsaxs) $ python -m pip install -e .[gpu]
 
 Updating Your Git Clone
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -120,11 +120,10 @@ The model, meaning specific implementations of the interfaces, is designed to op
 
 
 
-============================
 Creating a New Simulation Model
 ============================
 
-This document provides guidelines on how to develop a new simulation model that adheres to the established protocol. The protocol ensures compatibility between your simulation model and the fitter class, enabling seamless integration and functionality.
+This section provides guidelines on how to develop a new simulation model that adheres to the established protocol. The protocol ensures compatibility between your simulation model and the fitter class, enabling seamless integration and functionality.
 
 Overview
 --------
@@ -167,8 +166,6 @@ Key Components
      - **Raises**:
        - `NotImplementedError`: If the method is not implemented in the derived class.
 
-Developing a New Model
-======================
 
 To develop a new model, you need to create classes that inherit from the `Simulation` and `Geometry` protocols and implement all required methods. Here's how to approach this:
 
