@@ -71,6 +71,12 @@ dependencies = [
 [tool.hatch.envs.types.scripts]
 check = "mypy --install-types --non-interactive {args:src/cdsaxs}"
 
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = [
+    "tests",
+]
+
 [tool.coverage.run]
 source_pkgs = ["cdsaxs"]
 branch = true
