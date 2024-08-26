@@ -56,3 +56,22 @@ jobs:
       - uses: actions/upload-pages-artifact@v3.0.1
         with:
           path: 'docs/build/html/'
+
+  deploy-docs:
+    runs-on: ubuntu-latest
+    needs: [build-docs, tests]
+    if: github.ref  == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          name: CEA-MetroCarac/cdsaxs-doc
+          ref: refs/heads/main
+      - name: Download docs artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: github-pages
+          path: ${{ runner.temp }}
+      - name: copy_docs
+        run: cp -r ${{ runner.temp }}/github-pages.zip/* ${{ github.workspace }}
+      - name: copy_docs
+        run: ls -al ${{ github.workspace }}
