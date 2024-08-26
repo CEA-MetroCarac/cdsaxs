@@ -72,8 +72,8 @@ jobs:
           name: github-pages
           path: ${{ runner.temp }}
       - name: untar_docs
-        run: tar xvf ${{ runner.temp }}/artifact.tar ${{ runner.temp }}/github-pages/
-      - name: copy_docs
-        run: cp -r ${{ runner.temp }}/github-pages/* ${{ github.workspace }}
-      - name: copy_docs
-        run: ls -al ${{ github.workspace }}
+        run: |
+          mkdir -p ${{ runner.temp }}/github-pages/
+          tar xvf ${{ runner.temp }}/artifact.tar -C ${{ runner.temp }}/github-pages/
+          cp -r ${{ runner.temp }}/github-pages/* ${{ github.workspace }}
+          ls -al ${{ github.workspace }}
