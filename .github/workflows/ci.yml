@@ -74,6 +74,6 @@ jobs:
       - name: untar_docs
         run: |
           mkdir -p ${{ runner.temp }}/github-pages/
-          tar xvf ${{ runner.temp }}/artifact.tar -C ${{ runner.temp }}/github-pages/
+          tar xf ${{ runner.temp }}/artifact.tar -C ${{ runner.temp }}/github-pages/
           cp -r ${{ runner.temp }}/github-pages/* ${{ github.workspace }}
-          ls -al ${{ github.workspace }}
+          git status
