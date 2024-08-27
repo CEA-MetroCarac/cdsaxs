@@ -22,15 +22,6 @@ cdsaxs is available to install through :code:`pip`:
     # Within a venv:
     (cdsaxs-venv) $ pip install cdsaxs
 
-
-and :code:`conda` (via conda-forge):
-
-.. code-block:: shell
-    
-    # Within a conda env:
-    (cdsaxs) $ conda install -c conda-forge cdsaxs
-
-
 Creating an isolated Python environment
 ---------------------------------------
 

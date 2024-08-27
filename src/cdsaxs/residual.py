@@ -56,7 +56,7 @@ class Residual:
         self.Simulation = Simulation
         self.c = c
         self.best_fit = best_fit
-        self.xp = self.Simulation.xp if self.Simulation is not None else xp
+        self.xp = self.Simulation.xp if hasattr(self.Simulation, 'xp') else np
 
 
     def __call__(self, fit_params):
@@ -71,10 +71,9 @@ class Residual:
             numpy.ndarray or float
                 Residual value(s) between experimental and simulated data.
         """
-        if fit_params is not None and self.best_fit is not None:
-            qxfit = self.Simulation.simulate_diffraction(params=fit_params, fit_mode=self.mfit_mode, best_fit=self.best_fit)
-        elif fit_params is not None:
-            qxfit = self.Simulation.simulate_diffraction(params=fit_params, fit_mode=self.mfit_mode)
+
+        if fit_params is not None:
+            qxfit = self.Simulation.simulate_diffraction(params=fit_params)
 
         res = self.log_error(self.mdata, qxfit)
         

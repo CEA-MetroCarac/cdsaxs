@@ -60,21 +60,17 @@ class StackedTrapezoidSimulation(Simulation):
         self.TrapezoidGeometry = StackedTrapezoidGeometry(xp=self.xp, from_fitter=self.from_fitter, initial_guess=self.initial_guess)
         self.TrapezoidDiffraction = StackedTrapezoidDiffraction(TrapezoidGeometry=self.TrapezoidGeometry, xp=self.xp)
 
-    def simulate_diffraction(self, params=None, fit_mode='cmaes', best_fit=None):
+    def simulate_diffraction(self, params=None, fit_mode='cmaes'):
         """Simulates the diffraction pattern of the stacked trapezoids.
 
         Args:
             fitparams (list, optional): A list of floats coming from the fitter. Defaults to None.
-            fit_mode (str, optional): The fit mode to use for diffraction calculation ('cmaes' or 'mcmc'). Defaults to 'cmaes'.
             best_fit (array-like, optional): The best fit Arguments obtained from the fitter. Defaults to None.
 
         Returns:
             corrected_intensity (array-like): A 2D array of floats containing the corrected intensity.
         """
-        if fit_mode == 'cmaes':
-            corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, fitparams=params)
-        elif fit_mode == 'mcmc':
-            corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, fitparams=params)
+        corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, fitparams=params)
 
         if not self.from_fitter:
             return corrected_intensity[0]

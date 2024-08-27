@@ -63,7 +63,7 @@ class Fitter:
 
         self.Simulation = Simulation
         self.exp_data = exp_data
-        self.xp = Simulation.xp
+        self.xp = Simulation.xp if hasattr(Simulation, 'xp') else np
         self.best_fit_cmaes = None #set the best fit obtained from cmaes to MCMC 
         
     def set_best_fit_cmaes(self, best_fit):

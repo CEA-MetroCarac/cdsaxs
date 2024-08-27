@@ -169,21 +169,12 @@ Key Components
 
 To develop a new model, you need to create classes that inherit from the `Simulation` and `Geometry` protocols and implement all required methods. Here's how to approach this:
 
-1. **Define the Geometry**
+Look at the following tutorial to see how to implement a new model in the `cdsaxs` package.
 
-   Create a class that implements the `Geometry` protocol. This class should define the specific geometric properties of the system being simulated. For example, in a model of stacked trapezoids, this class would define the dimensions, angles, and positions of the trapezoids.
-
-   Implement the `convert_to_dataframe` method to organize the input parameters into a structured format suitable for the simulation. This method is crucial for ensuring that the parameters can be easily interpreted and manipulated by the `Fitter` class.
-
-2. **Create the Simulation Class**
-
-   Your simulation class should inherit from the `Simulation` protocol. This class is where the core logic of your simulation resides. It should use the geometric data from the `Geometry` class to set up and run the simulation.
-
-   Ensure that the `simulate_diffraction` method is implemented to perform the simulation. Depending on the complexity of your model, this method might involve extensive calculations or integrations.
-
-3. **Integration with the Fitter**
-
-   If your simulation will be used in conjunction with a fitter (e.g., for parameter optimization), make sure to implement the `set_from_fitter` method. This will enable your simulation to correctly handle data provided by the fitter and return results in a format that the fitter can use.
+.. toctree::
+   :maxdepth: 0
+  
+  ../../Tutorials/create_model.ipynb
 
 Conclusion
 ----------

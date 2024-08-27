@@ -43,7 +43,7 @@ class Simulation(Protocol):
         ...
 
     def simulate_diffraction(
-        self, fitparams=None, fit_mode='cmaes', best_fit=None
+        self, fitparams=None, best_fit=None
     ):
         
         """ This is a obligatory method that should be implemented by the Simulation class. It is used by Residual class.
