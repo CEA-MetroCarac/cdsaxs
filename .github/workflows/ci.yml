@@ -80,10 +80,27 @@ jobs:
       - name: setup git config
         run: |
           git config user.name "GitHub Actions Bot"
-          git config user.email "<>"  
+          git config user.email "actions@github.com"
       - name: commit docs
         run: |
           git status
           git add --all
           git commit -am "docs update"
+          git push
+      - name: cleanup
+        run: rm -rf *
+      - uses: actions/checkout@v4
+        with: 
+          repository: CEA-MetroCarac/CEA-MetroCarac.github.io
+          ref: refs/heads/main
+          token: ${{ secrets.CDSAXS_PAGES_ACTIONS_TOKEN }}
+          submodules: true
+      - name: Pull & update submodules recursively
+        run: |
+          git submodule update --init --recursive
+          git submodule update --recursive --remote
+      - name: Commit submodule update
+        run: |
+          git add --all
+          git commit -m "Update submodules" || echo "No changes to commit"
           git push
