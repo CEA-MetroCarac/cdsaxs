@@ -66,6 +66,7 @@ jobs:
         with:
           name: CEA-MetroCarac/cdsaxs-doc
           ref: refs/heads/main
+          token:  ${{ secrets.CDSAXS_PAGES_ACTIONS_TOKEN }}
       - name: Download docs artifact
         uses: actions/download-artifact@v4
         with:
@@ -76,4 +77,13 @@ jobs:
           mkdir -p ${{ runner.temp }}/github-pages/
           tar xf ${{ runner.temp }}/artifact.tar -C ${{ runner.temp }}/github-pages/
           cp -r ${{ runner.temp }}/github-pages/* ${{ github.workspace }}
+      - name: setup git config
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"  
+      - name: commit docs
+        run: |
           git status
+          git add --all
+          git commit -am "docs update"
+          git push
