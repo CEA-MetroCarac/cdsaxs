@@ -64,7 +64,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          name: CEA-MetroCarac/cdsaxs-doc
+          repository: CEA-MetroCarac/cdsaxs-doc
           ref: refs/heads/main
           token:  ${{ secrets.CDSAXS_PAGES_ACTIONS_TOKEN }}
       - name: Download docs artifact
