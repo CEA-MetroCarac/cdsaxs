@@ -21,6 +21,22 @@ class Geometry(Protocol):
             returns:
             df (pandas.DataFrame): a DataFrame containing the fitparams in a readable format.
         """
+
+        def rescale_fit_params(self, fitparams):
+            """
+                This is a obligatory method that should be implemented by the Geometry class.
+                The values incoming from the fitter are normalized in the range of -sigma to sigma they need to be rescaled.
+                so this method's job is to take the arrays of fitparams and rescale them based on the initial guess given by the user.
+                the formula used should be something like this:
+                rescaled_fitparams = fitparams * multiplier + initial_guess
+                multiplier and initial_guess are the values given by the user. if you find that a certain set of multiplier works
+                better you can hardcode them as well but it is not recommended as it will make the code less flexible.
+
+                Parameters:
+                fitparams (list): an array returned by the fitter that contains the population to be evaluated.
+                
+                returns:
+                fitparams (list): an array containing the rescaled fitparams.
         ...
 
 
