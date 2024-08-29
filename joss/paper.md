@@ -1,47 +1,34 @@
 ---
-title: 'Gala: A Python package for galactic dynamics'
+title: 'cdsaxs: A model fitting package for CD-SAXS data analysis'
 tags:
   - Python
-  - astronomy
-  - dynamics
-  - galactic dynamics
-  - milky way
-authors:
-  - name: Adrian M. Price-Whelan
-    orcid: 0000-0000-0000-0000
-    equal-contrib: true
-    affiliation: "1, 2" # (Multiple affiliations must be quoted)
-  - name: Author Without ORCID
-    equal-contrib: true # (This is how you can denote equal contributions between multiple authors)
-    affiliation: 2
-  - name: Author with no affiliation
-    corresponding: true # (This is how to denote the corresponding author)
-    affiliation: 3
-  - given-names: Ludwig
-    dropping-particle: van
-    surname: Beethoven
-    affiliation: 3
-affiliations:
- - name: Lyman Spitzer, Jr. Fellow, Princeton University, USA
-   index: 1
- - name: Institution Name, Country
-   index: 2
- - name: Independent Researcher, Country
-   index: 3
-date: 13 August 2017
-bibliography: paper.bib
+  - CD-Saxs
+  - X-ray scattering
 
-# Optional fields if submitting to a AAS journal too, see this blog post:
-# https://blog.joss.theoj.org/2018/12/a-new-collaboration-with-aas-publishing
-aas-doi: 10.3847/xxxxx <- update this with the DOI from AAS once you know it.
-aas-journal: Astrophysical Journal <- The name of the AAS journal.
+authors:
+  - name: Nischal Dhungana
+    orcid: 0009-0007-8982-424X
+    affiliation: "1"
+  - name: Guillaume Freychet
+    orcid: 
+    affiliation: "2"
+  - name : Matthew Bryan
+    orcid: 0000-0001-9134-384X
+    affiliation: "2"
+affiliations:
+  - name: Univ. Montpellier, CEA, Leti, F-38000 Grenoble, France
+    index: 1
+  - name: CEA, Leti, F-38000 Grenoble, France
+    index: 2
+date: 28 August 2024
+bibliography: paper.bib
 ---
 
 # Summary
 
-Miniaturizing transistors, the fundamental components of integrated circuits, poses significant challenges for the semiconductor industry. Accurate measurement of these features during production is essential to ensure the creation of high-quality chips. However, conventional in-line metrology techniques are approaching their limitations. To address these challenges, the industry is turning to advanced X-ray-based metrology.
+Miniaturizing transistors, the fundamental components of integrated circuits, poses significant challenges for the semiconductor industry. Accurate measurement of these features during production is essential to ensure the creation of high-quality chips. However, conventional in-line metrology techniques are approaching their limitations. To address these challenges, the industry is turning to advanced X-ray-based metrology [@sunday_2015].
 
-CD-SAXS (Critical Dimension Small Angle X-ray Scattering) is an emerging and promising technique in this field. Studies<span style="color:red">TODO: Add reference</span> have demonstrated the effectiveness of CD-SAXS in accurately characterizing the shape and spacing of nanometer-scale patterns. The cdsaxs package is designed to offer comprehensive simulation and fitting tools for CD-SAXS synchrotron data, supporting researchers in advancing this innovative technology.
+CD-SAXS (Critical Dimension Small Angle X-ray Scattering) is an emerging and promising technique in this field. Studies[@sunday_2015] have demonstrated the effectiveness of CD-SAXS in accurately characterizing the shape and spacing of nanometer-scale patterns. The cdsaxs package is designed to offer comprehensive simulation and fitting tools for CD-SAXS synchrotron data, supporting researchers in advancing this innovative technology.
 
 
 # Statement of need
@@ -50,15 +37,15 @@ CD-SAXS is a powerful yet emerging technique for characterization of nano-compon
 
 The cdsaxs package is designed to address this critical gap by providing a modular, open-source solution tailored for CD-SAXS data analysis. It includes two robust models for simulating CD-SAXS data, while also allowing researchers to integrate their own models. This flexibility is crucial for testing and validating models against experimental data, making the development process more streamlined and accessible.
 
-A key feature of cdsaxs is its separation of the simulation and fitting processes, enabling users to concentrate on model development and data analysis without being encumbered by technical complexities. The package is optimized for performance, with support for parallelized fitting on both CPUs and GPUs, significantly enhancing the speed and efficiency of data processing. The fitting process in cdsaxs is powered by the CMAES (Covariance Matrix Adaptation Evolutionary Strategy) algorithm, known for its rapid convergence. This efficiency allows for real-time data fitting during experiments, empowering researchers to dynamically adjust experimental parameters based on immediate feedback from the analysis.
+A key feature of cdsaxs is its separation of the simulation and fitting processes, enabling users to concentrate on model development and data analysis without being encumbered by technical complexities. The package is optimized for performance, with support for parallelized fitting on both CPUs and GPUs, significantly enhancing the speed and efficiency of data processing. The fitting process in cdsaxs is powered by the CMAES (Covariance Matrix Adaptation Evolutionary Strategy) algorithm, known for its rapid convergence for x-ray fitting[@hannon2016advancing]. This efficiency allows for real-time data fitting during experiments, empowering researchers to dynamically adjust experimental parameters based on immediate feedback from the analysis.
 
-Additionally, it incorporates uncertainty estimation in the fitted parameters using the MCMC (Monte Carlo Markov Chain) inverse algorithm, providing researchers with more reliable and nuanced results.
+Additionally, it incorporates uncertainty estimation in the fitted parameters using the MCMC (Monte Carlo Markov Chain) inverse algorithm, providing researchers with more reliable and nuanced results[@sunday2016mcmc].
 
 By filling the current void in CD-SAXS data analysis tools, cdsaxs not only accelerates research workflows but also democratizes access to advanced analytical techniques, fostering innovation and discovery in this promising field.
 
 # Description
 
-The `cdsaxs` package provides a comprehensive framework for analyzing CD-SAXS data, focusing on the systematic workflow of candidate generation, evaluation, and uncertainty estimation.
+The `cdsaxs` package provides a comprehensive framework for analyzing CD-SAXS data, focusing on the systematic workflow of candidate generation, evaluation, and uncertainty estimation. It is also flexible enough to accommodate user-defined models, making it a versatile tool for researchers working with diverse nanostructures.
 
 1. **Candidate Generation and Evaluation**:
     - The core of the `cdsaxs` fitting process begins with generating a series of candidate parameters. Each set of parameters represents a possible nanostructure configuration, defined by a set of features(e.g., widths, heights etc).
@@ -67,28 +54,20 @@ The `cdsaxs` package provides a comprehensive framework for analyzing CD-SAXS da
 
 2. **Simulation and Comparison**:
     - The simulation process can also function independently, generating CD-SAXS data based on user-defined parameters without the need for experimental data. This is particularly useful for testing and validating models in a controlled setting.
+    - In addition to the two built in models, users can define their own models, allowing for a wide range of nanostructure configurations to be tested.
     - When experimental data is available, the package simulates scattering profiles for each candidate model and calculates a goodness-of-fit metric by comparing the simulated data with the experimental measurements. The optimization algorithm adjusts the model parameters to minimize this metric, ensuring the best possible match.
 
 3. **Uncertainty Estimation**:
     - After determining the best-fit model, `cdsaxs` employs a Monte Carlo Markov Chain (MCMC) algorithm to estimate the uncertainties associated with the model parameters. This step is crucial for understanding the robustness of the fit and identifying potential alternative structures that could produce similar scattering data.
     - The MCMC method generates a distribution of possible parameter sets, from which the package calculates confidence intervals, providing a quantitative measure of uncertainty for each parameter.
 
+Following diagram illustrates the overall workflow of the CMAES algorithm in the `cdsaxs` package:
+ ![workflow of the cmaes algorithm cdsaxs package.\label{fig:workflow}](cmaes_overall.png){width="100%"}
+
+ And, the overall workflow of the MCMC algorithm:
+ ![workflow of the mcmc algorithm cdsaxs package.\label{fig:workflow}](mcmc_overall.png){width="100%"}
+
 This workflow ensures that the `cdsaxs` package not only identifies the optimal model configuration but also quantifies the confidence in the results, making it a powerful tool for CD-SAXS data analysis in both research and industrial applications.
-
-# Citations
-
-Citations to entries in paper.bib should be in
-[rMarkdown](http://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html)
-format.
-
-If you want to cite a software repository URL (e.g. something on GitHub without a preferred
-citation) then you can do it with the example BibTeX entry below for @fidgit.
-
-For a quick reference, the following citation commands can be used:
-- `@author:2001`  ->  "Author et al. (2001)"
-- `[@author:2001]` -> "(Author et al., 2001)"
-- `[@author1:2001; @author2:2001]` -> "(Author1 et al., 2001; Author2 et al., 2002)"
-
 
 # Acknowledgements
 
