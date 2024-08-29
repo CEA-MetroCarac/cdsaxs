@@ -12,7 +12,7 @@ The collection of [functions](https://github.com/Xi-CAM/Xi-cam.CDSAXS/blob/maste
 
 
 # Installation
-`cdsaxs` is available on PyPI and can be installed using pip. <span style="color:red">TODO: upload to PyPI</span>
+`cdsaxs` is available on PyPI and can be installed using pip.
 
 ```bash
 pip install cdsaxs
@@ -38,14 +38,14 @@ pip install .
 Two models were considered in the development of this code. The first model focuses on the cross section of a line in a line-space pattern. In this model, the cross section of a line is represented by a stack of trapezoids, which collectively form the shape of the cross section. This model is known as the Stacked Trapezoid Model.
 
 
-| <img src="./assets/images/trapezoid.png" width="400"> |
+| <img src="https://cea-metrocarac.github.io/cdsaxs/_images/trapezoid.png" width="400"> |
 |:--:|
 | *SEM image in a) is a cross-section of a line in SEM image in b). The black trapezoidal shapes in a) represent the modelling done for this simulation.* |
 
 
 The second model introduces another concept known as the Strong Castle Model. This model builds upon the previous one by incorporating an additional nano-structure on top, resulting in an overlay. It provides a tool for representing the overlay between multiple structures.
 
-|<img src="./assets/images/overlay.png" width="300">|
+|<img src="https://cea-metrocarac.github.io/cdsaxs/_images/overlay.png" width="300">|
 |:--:|
 | *Strong castle model where top structure is not aligned thus we have an overlay.* |
 
@@ -69,9 +69,9 @@ $\beta$'s are the bottom side angles of the trapezoid. $q_{x} , q_{z}$ are the f
 
 ## Fitting algorithm
 
-The intensity map obtained from psynchotron experiment looks like following:
+The intensity map obtained from synchotron experiment looks like following:
 
-|<img src="./assets/images/rotation.png" width="400">|
+|<img src="https://cea-metrocarac.github.io/cdsaxs/_images/rotation.png" width="400">|
 |:--:|
 | *Intensity map and vertical cut of corresponding bragg order* |
 

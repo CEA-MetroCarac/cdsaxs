@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "cdsaxs"
 dynamic = ["version"]
-description = 'Fit CDSAXS geometry'
+description = 'package streamlines CD-SAXS data analysis by combining model generation, optimization, and uncertainty estimation for nanostructure characterization'
 readme = "README.md"
 requires-python = ">=3.8"
 license = "MIT"
