@@ -62,9 +62,11 @@ The `cdsaxs` package provides a comprehensive framework for analyzing CD-SAXS da
     - The MCMC method generates a distribution of possible parameter sets, from which the package calculates confidence intervals, providing a quantitative measure of uncertainty for each parameter.
 
 Following diagram illustrates the overall workflow of the CMAES algorithm in the `cdsaxs` package:
+
  ![workflow of the cmaes algorithm cdsaxs package.\label{fig:workflow}](cmaes_overall.png){width="100%"}
 
  And, the overall workflow of the MCMC algorithm:
+ 
  ![workflow of the mcmc algorithm cdsaxs package.\label{fig:workflow}](mcmc_overall.png){width="100%"}
 
 This workflow ensures that the `cdsaxs` package not only identifies the optimal model configuration but also quantifies the confidence in the results, making it a powerful tool for CD-SAXS data analysis in both research and industrial applications.
