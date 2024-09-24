@@ -8,7 +8,7 @@ cdsaxs welcomes contributions from everyone! Here's how you can get involved:
 4. Make sure all tests pass! This ensures your changes don't break existing functionality.
 5. Once everyone's happy, we'll merge your code into cdsaxs and make a new release.
 
-For more detailed contribution guidelines, refer to our official Contributing Guide: [Contributing Guide](https://cea-metrocarac.github.io/cdsaxs/for_developpers.html).
+For more detailed explanation on setting up the environment and developping your own model here's a [Guide](https://cea-metrocarac.github.io/cdsaxs/for_developpers.html).
 
 ## Reporting Bugs
 
