@@ -1,6 +1,7 @@
 [![CI Tests](https://img.shields.io/badge/CI%20Tests-passing-brightgreen)](https://github.com/CEA-MetroCarac/cdsaxs/actions/workflows/ci.yml)
-[![Docs](https://img.shields.io/badge/docs-passing-brightgreen)](CEA-MetroCarac.github.io/cdsaxs)
+[![Docs](https://img.shields.io/badge/docs-passing-brightgreen)](https://CEA-MetroCarac.github.io/cdsaxs)
 [![PyPI](https://img.shields.io/badge/pypi-v0.0.2-blue)](https://pypi.org/project/cdsaxs/)
+[![status](https://joss.theoj.org/papers/ed3d2c3d186d1407b25b6096e3c0ee57/status.svg)](https://joss.theoj.org/papers/ed3d2c3d186d1407b25b6096e3c0ee57)
 
 
 
