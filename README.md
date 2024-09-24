@@ -136,3 +136,7 @@ Once all the population of possible solutions are found we can use it to obtain 
 # Tutorials 
 
 Please consult the [tutorials](https://github.com/CEA-MetroCarac/cdsaxs/tree/main/Tutorials) folder for more information on how to use the package.
+
+# Contributing
+
+Please refer to the [CONTRIBUTING.md](https://github.com/CEA-MetroCarac/cdsaxs/blob/main/CONTRIBUTING.md) file for more information on how to contribute to the project.
