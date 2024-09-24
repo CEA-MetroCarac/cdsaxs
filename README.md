@@ -1,5 +1,5 @@
 [![CI Tests](https://img.shields.io/badge/CI%20Tests-passing-brightgreen)](https://github.com/CEA-MetroCarac/cdsaxs/actions/workflows/ci.yml)
-[![Docs](https://img.shields.io/badge/docs-passing-brightgreen)](CEA-MetroCarac.github.io/cdsaxs)
+[![Docs](https://img.shields.io/badge/docs-passing-brightgreen)](https://CEA-MetroCarac.github.io/cdsaxs)
 [![PyPI](https://img.shields.io/badge/pypi-v0.0.2-blue)](https://pypi.org/project/cdsaxs/)
 
 
