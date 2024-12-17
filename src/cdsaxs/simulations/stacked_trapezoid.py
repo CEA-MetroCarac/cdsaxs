@@ -148,13 +148,7 @@ class StackedTrapezoidGeometry(Geometry):
         """
         # handle symmetric case
         if 'langles' not in self.initial_guess.keys() or 'rangles' not in self.initial_guess.keys():
-            self.symmetric = True
-            if 'rangles' not in self.initial_guess.keys():
-                self.initial_guess['rangles'] = self.initial_guess['langles']
-            elif 'langles' not in self.initial_guess.keys():
-                self.initial_guess['langles'] = self.initial_guess['rangles']
-            else:
-                raise ValueError('either langles or rangles should be provided')
+            self.symmetric = True      
 
         modified_params = {}
 
@@ -189,10 +183,6 @@ class StackedTrapezoidGeometry(Geometry):
         # extract keys from the initial guess dataframe
         if self.from_fitter:
             keys = self.initial_guess_dataframe.columns
-
-            # remove the keys that are not needed for the symmetric case
-            if self.symmetric:
-                keys = [key for key in keys if not key.startswith('langle')]
 
             pd_fitparams = pd.DataFrame(fitparams, columns=keys)
             pd_fitparams = self.rescale_fitparams(pd_fitparams)
@@ -231,7 +221,9 @@ class StackedTrapezoidGeometry(Geometry):
         else:
             rescaled_fitparams_df = fitparams_df
 
-        return self.check_physical_validity(rescaled_fitparams_df)
+        rescaled = self.check_physical_validity(rescaled_fitparams_df)
+
+        return rescaled 
 
     def check_physical_validity(self, rescaled_fitparams_df):
         """Check if the values obtained from the fitter make physical sense.
@@ -313,6 +305,8 @@ class StackedTrapezoidGeometry(Geometry):
         # handling symmetric case
         if langles.size == 0:
             langles = rangles
+        if rangles.size == 0:
+            rangles = langles
         
         try:
             if self.xp == cp:
