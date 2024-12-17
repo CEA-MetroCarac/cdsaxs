@@ -10,7 +10,7 @@ authors:
     orcid: 0009-0007-8982-424X
     affiliation: "1"
   - name: Guillaume Freychet
-    orcid: 
+    orcid: 0000-0001-8406-798X
     affiliation: "2"
   - name : Matthew Bryan
     orcid: 0000-0001-9134-384X

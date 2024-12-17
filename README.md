@@ -1,3 +1,10 @@
+[![CI Tests](https://img.shields.io/badge/CI%20Tests-passing-brightgreen)](https://github.com/CEA-MetroCarac/cdsaxs/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-passing-brightgreen)](https://CEA-MetroCarac.github.io/cdsaxs)
+[![PyPI](https://img.shields.io/badge/pypi-v0.0.2-blue)](https://pypi.org/project/cdsaxs/)
+[![status](https://joss.theoj.org/papers/ed3d2c3d186d1407b25b6096e3c0ee57/status.svg)](https://joss.theoj.org/papers/ed3d2c3d186d1407b25b6096e3c0ee57)
+
+
+
 # Overview
 
 
@@ -129,3 +136,7 @@ Once all the population of possible solutions are found we can use it to obtain 
 # Tutorials 
 
 Please consult the [tutorials](https://github.com/CEA-MetroCarac/cdsaxs/tree/main/Tutorials) folder for more information on how to use the package.
+
+# Contributing
+
+Please refer to the [CONTRIBUTING.md](https://github.com/CEA-MetroCarac/cdsaxs/blob/main/CONTRIBUTING.md) file for more information on how to contribute to the project.
