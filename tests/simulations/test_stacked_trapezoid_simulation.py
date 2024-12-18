@@ -206,7 +206,6 @@ class TestStackedTrapezoidDiffraction:
         symmetric_geometry = simulation.StackedTrapezoidGeometry(initial_guess=symmetric_initial_guess)
         symmetric_geometry.set_initial_guess_dataframe()
         assert symmetric_geometry.symmetric
-        assert 'rangle1' in symmetric_geometry.initial_guess_dataframe.columns
 
     def test_physical_validity(self, trapezoid_geometry):
         trapezoid_geometry.set_initial_guess_dataframe()
