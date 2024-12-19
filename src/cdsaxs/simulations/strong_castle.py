@@ -108,13 +108,19 @@ class StrongCastleGeometry(StackedTrapezoidGeometry):
             initial_guess (dict): dictionary containing the initial guess for the parameters
 
         """
+        langles = None
+        rangles = None
 
         if self.initial_guess is None: 
-            langles = params["langles"]
-            rangles = params["rangles"]
+            if "langles" in params:
+                langles = params["langles"]
+            if "rangles" in params:
+                rangles = params["rangles"]
         else:
-            langles = self.initial_guess["langles"]["value"]
-            rangles = self.initial_guess["rangles"]["value"]
+            if "langles" in self.initial_guess:
+                langles = self.initial_guess["langles"]["value"]
+            if "rangles" in self.initial_guess:
+                rangles = self.initial_guess["rangles"]["value"]
 
         #from the initial_guess dictionary get the number of langles
         # Check the number of angles provided
