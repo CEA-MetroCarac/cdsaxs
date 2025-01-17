@@ -50,7 +50,7 @@ jobs:
       - name: install package
         run: pip install .
       - name: install doc_reqs
-        run: pip install -r docs_requirements.txt
+        run: pip install -r ./docs/requirements.txt
       - name: 'run docs-build'
         run: sphinx-build -j auto -b html "docs/source" "docs/build/html"
       - uses: actions/upload-pages-artifact@v3.0.1
