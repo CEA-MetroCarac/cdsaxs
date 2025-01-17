@@ -513,14 +513,7 @@ class Fitter:
         min = df.min()
         max = df.max()
 
-        if cf == 0.99:
-            z = 2.576
-        elif cf == 0.95:
-            z = 1.96
-        elif cf == 0.90:
-            z = 1.645
-        else:
-            z = 2.576
+        z = stats.norm.ppf(1 - (1 - cf) / 2)
 
         uncertainity = z * std / np.sqrt(count)
 
