@@ -189,8 +189,30 @@ Testing
 Pytest is used for testing the codebase. The tests are located in the `tests` directory and are organized by module. When adding new features or modifying existing code, 
 it is essential to write tests and check that the existing tests pass.
 
+To run the tests, you need to install the testing dependencies. You can do this by running the following command:
+
+.. code-block:: shell
+
+    (cdsaxs) $ pip install -r tests/requirements.txt
+
 To run the tests, navigate to the root directory of the project and execute the following command:
 
 .. code-block:: shell
 
     (cdsaxs) $ pytest
+
+Modifying and building the documentation
+========================================
+
+TO build the documentation, you need to install the dependencies which are listed in the `docs/requirements.txt` file. You can install them by running the following command:
+
+.. code-block:: shell
+
+    (cdsaxs) $ pip install -r docs/requirements.txt
+
+The documentation is built using Sphinx. To modify the documentation, navigate to the `docs` directory and edit the `.rst` files. Once you have made your changes, you can build the documentation by running the following command:
+
+
+.. code-block:: shell
+
+    (cdsaxs) $ make html
