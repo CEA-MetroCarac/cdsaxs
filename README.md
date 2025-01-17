@@ -19,23 +19,40 @@ The collection of [functions](https://github.com/Xi-CAM/Xi-cam.CDSAXS/blob/maste
 
 
 # Installation
-`cdsaxs` is available on PyPI and can be installed using pip.
+To install `cdsaxs`, it is recommended to use a virtual environment. Follow these steps:
 
-```bash
-pip install cdsaxs
-```
+1. Create a virtual environment named `cdsaxs-venv`:
+    ```bash
+    python -m venv cdsaxs-venv
+    ```
 
-Similiarly, you can also install the latest version from the GitHub repository using pip:
+2. Activate the virtual environment:
 
-```bash
-pip install git+https://github.com/CEA-MetroCarac/cdsaxs.git
-```
-or clone the repository and install the package by running the following commands in the terminal:
-```bash
-git clone https://github.com/CEA-MetroCarac/cdsaxs.git
-cd cdsaxs
-pip install .
-```
+    - On Windows:
+        ```bash
+        cdsaxs-venv\Scripts\activate
+        ```
+    - On macOS and Linux:
+        ```bash
+        source cdsaxs-venv/bin/activate
+        ```
+
+3. Install `cdsaxs` from PyPI:
+    ```bash
+    pip install cdsaxs
+    ```
+
+4. Alternatively, install the latest version from the GitHub repository:
+    ```bash
+    pip install git+https://github.com/CEA-MetroCarac/cdsaxs.git
+    ```
+
+5. Or clone the repository and install the package:
+    ```bash
+    git clone https://github.com/CEA-MetroCarac/cdsaxs.git
+    cd cdsaxs
+    pip install .
+    ```
 
 # Background
 
