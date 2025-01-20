@@ -349,9 +349,10 @@ class Fitter:
         # Assign the seed given to user if the format is correct
         if seed is not None:
             if isinstance(seed, int) and seed >= 0:
-                np.random.seed(seed)
+                np.random.default_rng(seed)
             else:
                 raise ValueError("Seed must be a non-negative integer.")
+        np.random.default_rng()
         
         if not hasattr(sigma, '__len__'):
             sigma = [sigma] * N
