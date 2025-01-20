@@ -300,7 +300,7 @@ class Fitter:
 
         return best_corr, best_fitness
     
-    def mcmc_bestfit_stats(self, N, sigma, nsteps, nwalkers, gaussian_move=False, seed=None, verbose=False, test=False, dir_save=None):
+    def mcmc_bestfit_stats(self, N, sigma, nsteps, nwalkers, gaussian_move=False, seed=None, verbose=False, test=False, dir_save=None, tau=None):
         """
         Generate a set of statstical data on the best fit parameters using the MCMC (Markov Chain Monte Carlo) algorithm. Two kinds of options for moves to explore solution space are provided gaussian and stretch move. Default is strech move and recommended.
 
@@ -315,7 +315,7 @@ class Fitter:
             seed (int, optional): The seed for the random number generator. If None, a random seed is generated. Default is None.
             verbose (bool, optional): Controls whether to print progress information during fitting. If True, progress information is printed. Default is False.
             test (bool, optional): Controls whether to test the function and return mean values instead of performing the full fitting process. If True, the function returns mean values. Default is True.
-
+            tau (float, optional): The autocorrelation time to find burnin steps. If None, is provided emcee package is used to estimate the autocorrelation time. If emcee fails to do so 1/3 of the first nsteps are discarded. Default is None.
         Returns:
             None
 
@@ -346,10 +346,12 @@ class Fitter:
         # Empirical factor to modify MCMC acceptance rate
         c = residual.c
         
-        # Generate a random seed if none is provided
-        if seed is None:
-            seed = randrange(2 ** 32)
-        np.random.seed(seed)
+        # Assign the seed given to user if the format is correct
+        if seed is not None:
+            if isinstance(seed, int) and seed >= 0:
+                np.random.seed(seed)
+            else:
+                raise ValueError("Seed must be a non-negative integer.")
         
         if not hasattr(sigma, '__len__'):
             sigma = [sigma] * N
@@ -387,12 +389,15 @@ class Fitter:
                 do_verbose(Sampler)
             
 
-        #Autocorelation time to find burnin steps
+        #Autocorelation time to find burnin steps, if not provided by user and emcee fails to do so 1/3 of the first nsteps are discarded. 1/3 period is the common heuristic for MCMC burnin
         try:
-            tau = Sampler.get_autocorr_time(tol=5)
+            if tau is None:
+                tau = Sampler.get_autocorr_time(tol=5)
             burnin = int(2 * np.max(tau))
-        except:
-            burnin = int(1/3 * nsteps)
+        except (emcee.autocorr.AutocorrError, ValueError) as e:
+            print(f"Warning: Failed to compute autocorrelation time. Using default burn-in which is 1/3 of nsteps. Error: {e}")
+            burnin = int(nsteps / 3) 
+
         
         
         # Data processing and analysis
@@ -495,7 +500,6 @@ class Fitter:
     @staticmethod
     def do_stats(df, cf=0.99):
         """
-        Generate a set of statistical data on the best fit parameters obtained from the MCMC fitting process.
 
         This method generates a set of statistical data on the best fit parameters obtained from the MCMC fitting process.
 
