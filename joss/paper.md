@@ -69,6 +69,17 @@ Following diagram illustrates the overall workflow of the CMAES algorithm in the
 
 This workflow ensures that the `cdsaxs` package not only identifies the optimal model configuration but also quantifies the confidence in the results, making it a powerful tool for CD-SAXS data analysis in both research and industrial applications.
 
+# Comparision
+
+Publicly available software for CD-SAXS data analysis is limited. One notable application is **Xi-cam** (add reference here), which was used for simulations in this (Timothée’s) paper. The `cdsaxs` package, inspired by Xi-cam, aims to enhance usability while providing a more streamlined experience.
+
+A dataset from Timothée et al.'s study was used to fit the experimental data, enabling a comparison between Xi-cam and the `cdsaxs` package. The results are shown in the figure below:
+
+![Comparison of fits obtained by Xi-cam and the cdsaxs package. a is in fourier space where results obtained experimentally are also plotted and b is the comparison of the profile in real space.\label{fig:compare}](compare_xicam_2.png){width="100%"}
+
+As expected, for same initial conditions and search criteria, the fits are remarkably similar.
+
+
 # Acknowledgements
 
 This work, carried out on the Platform for Nanocharacterisation (PFNC), was supported by the “Recherche Technologique de Base” and "France 2030 - ANR-22-PEEL-0014" programs of the French National Research Agency (ANR).
