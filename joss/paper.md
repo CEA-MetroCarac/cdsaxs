@@ -41,7 +41,7 @@ A key feature of cdsaxs is its separation of the simulation and fitting processe
 
 Additionally, it incorporates uncertainty estimation in the fitted parameters using the MCMC (Monte Carlo Markov Chain) inverse algorithm, providing researchers with more reliable and nuanced results[@sunday2016mcmc].
 
-By filling the current void in CD-SAXS data analysis tools, cdsaxs not only accelerates research workflows but also democratizes access to advanced analytical techniques, fostering innovation and discovery in this promising field.
+By aiming to fill the current void in CD-SAXS data analysis tools, cdsaxs targets to speed up research workflows and to make advanced analytical techniques more accessible.
 
 # Description
 
@@ -71,9 +71,9 @@ This workflow ensures that the `cdsaxs` package not only identifies the optimal 
 
 # Comparision
 
-Publicly available software for CD-SAXS data analysis is limited. One notable application is **Xi-cam** (add reference here), which was used for simulations in this (Timothée’s) paper. The `cdsaxs` package, inspired by Xi-cam, aims to enhance usability while providing a more streamlined experience.
+Publicly available software for CD-SAXS data analysis is limited. One notable application is **Xi-cam**[@Xi-cam], which was used for CD-SAXS simulations in this paper[@timothee]. The `cdsaxs` package is inspired by Xi-cam and aims to further enhance usability while providing a more streamlined experience.
 
-A dataset from Timothée et al.'s study was used to fit the experimental data, enabling a comparison between Xi-cam and the `cdsaxs` package. The results are shown in the figure below:
+The experimental dataset used by Timothée et al.'s for their study was used here for a fit with six trapezoid model, enabling a comparison between Xi-cam and the `cdsaxs` package. The results are shown in the figure below:
 
 ![Comparison of fits obtained by Xi-cam and the cdsaxs package. a is in fourier space where results obtained experimentally are also plotted and b is the comparison of the profile in real space.\label{fig:compare}](compare_xicam_2.png){width="100%"}
 
