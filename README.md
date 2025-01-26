@@ -37,22 +37,35 @@ To install `cdsaxs`, it is recommended to use a virtual environment. Follow thes
         source cdsaxs-venv/bin/activate
         ```
 
-3. Install `cdsaxs` from PyPI:
-    ```bash
-    pip install cdsaxs
-    ```
+3. Install `cdsaxs`:
 
-4. Alternatively, install the latest version from the GitHub repository:
-    ```bash
-    pip install git+https://github.com/CEA-MetroCarac/cdsaxs.git
-    ```
+    -   from PyPI:
+        ```bash
+        pip install cdsaxs
+        ```
 
-5. Or clone the repository and install the package:
+    -  Alternatively, install the latest version from the GitHub repository:
+        ```bash
+        pip install git+https://github.com/CEA-MetroCarac/cdsaxs.git
+        ```
+
+    -  Or clone the repository and install the package:
+        ```bash
+        git clone https://github.com/CEA-MetroCarac/cdsaxs.git
+        cd cdsaxs
+        pip install .
+        ```
+6. If you want to run cdsaxs on gpu:
+
+    From PyPi:
     ```bash
-    git clone https://github.com/CEA-MetroCarac/cdsaxs.git
-    cd cdsaxs
-    pip install .
+    pip install cdsaxs[gpu]
     ```
+    For the latest version from github:
+    ```bash
+    pip install "cdsaxs[gpu] @ git+https://github.com/CEA-MetroCarac/cdsaxs.git"
+    ```
+    Please keep in mind that you need to have a suitable gpu that can run `Cupy` version `9.0.0` or above, the installation will fail otherwise. Please read [official Cupy page](https://cupy.dev/) for more detail.
 
 # Background
 
