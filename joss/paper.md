@@ -70,7 +70,7 @@ Following diagram illustrates the overall workflow of the CMAES algorithm in the
 
 This workflow ensures that the `cdsaxs` package not only identifies the optimal model configuration but also quantifies the confidence in the results, making it a powerful tool for CD-SAXS data analysis in both research and industrial applications.
 
-# Comparision
+# Comparison
 
 **Xi-cam**[@Xi-cam] is the open source software that was used for CD-SAXS simulations in this paper[@timothee]. Notably they use six stacked trapezoid model and rounded trapezoid model to do the simulation. The experimental dataset used by Timothée et al.'s for their study was used here for a fit with six stacked trapezoid model, enabling a comparison between Xi-cam and the `cdsaxs` package. The results are shown in the figure below:
 
