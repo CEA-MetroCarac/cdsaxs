@@ -300,7 +300,7 @@ class Fitter:
 
         return best_corr, best_fitness
     
-    def mcmc_bestfit_stats(self, N, sigma, nsteps, nwalkers, gaussian_move=False, seed=None, verbose=False, test=False, dir_save=None, tau=None):
+    def mcmc_bestfit_stats(self, N, sigma, nsteps, nwalkers, gaussian_move=False, seed=None, verbose=False, test=False, dir_save=None, tau=None, c=1e-5):
         """
         Generate a set of statstical data on the best fit parameters using the MCMC (Markov Chain Monte Carlo) algorithm. Two kinds of options for moves to explore solution space are provided gaussian and stretch move. Default is strech move and recommended.
 
@@ -316,6 +316,7 @@ class Fitter:
             verbose (bool, optional): Controls whether to print progress information during fitting. If True, progress information is printed. Default is False.
             test (bool, optional): Controls whether to test the function and return mean values instead of performing the full fitting process. If True, the function returns mean values. Default is True.
             tau (float, optional): The autocorrelation time to find burnin steps. If None, is provided emcee package is used to estimate the autocorrelation time. If emcee fails to do so 1/3 of the first nsteps are discarded. Default is None.
+            c (float, optional): Empirical factor to modify the MCMC acceptance rate. Default is 1e-5.
         Returns:
             None
 
@@ -333,7 +334,7 @@ class Fitter:
         self.Simulation.set_from_fitter(True, self.best_fit_cmaes)
 
         #declare Fitness function and register
-        residual = Residual(self.exp_data, fit_mode='mcmc', xp=self.xp, Simulation=self.Simulation, best_fit=self.best_fit_cmaes)
+        residual = Residual(self.exp_data, fit_mode='mcmc', xp=self.xp, Simulation=self.Simulation, best_fit=self.best_fit_cmaes, c=c)
 
 
         def do_verbose(Sampler):
@@ -343,8 +344,8 @@ class Fitter:
                 print('Acceptance fraction: ' + str(np.mean([Sampler.acceptance_fraction for Sampler in Sampler])))
             sys.stdout.flush()
         
-        # Empirical factor to modify MCMC acceptance rate
-        c = residual.c
+        # # Empirical factor to modify MCMC acceptance rate
+        # c = residual.c
         
         # Assign the seed given to user if the format is correct
         if seed is not None:
@@ -352,7 +353,8 @@ class Fitter:
                 np.random.default_rng(seed)
             else:
                 raise ValueError("Seed must be a non-negative integer.")
-        np.random.default_rng()
+        else:
+            np.random.default_rng()
         
         if not hasattr(sigma, '__len__'):
             sigma = [sigma] * N
@@ -371,7 +373,7 @@ class Fitter:
             # Use Gaussian move for the proposal distribution
             individuals = [np.random.uniform(-sigma, sigma, N) for _ in range(nwalkers)]
             
-            Sampler = emcee.EnsembleSampler(nwalkers, N, residual, moves=emcee.moves.GaussianMove(sigma), pool=None, vectorize=True)
+            Sampler = emcee.EnsembleSampler(nwalkers, N, residual, moves=emcee.moves.GaussianMove(cov=sigma**2, mode="vector"), pool=None, vectorize=True)
 
             with np.errstate(divide='ignore', invalid='ignore'):    
                 Sampler.run_mcmc(individuals, nsteps, progress=True)
@@ -499,13 +501,14 @@ class Fitter:
         print('Saved to ' + os.path.join(dir_save, name))
 
     @staticmethod
-    def do_stats(df, cf=0.99):
+    def do_stats(df, ci=0.95):
         """
 
         This method generates a set of statistical data on the best fit parameters obtained from the MCMC fitting process.
 
         Args:
             df (pandas.DataFrame): The DataFrame containing the best fit parameters.
+            ci (float, optional): The confidence interval. Default is 0.95.
 
         Returns:
             pandas.DataFrame: A DataFrame containing the statistical data on the best fit parameters.
@@ -518,9 +521,9 @@ class Fitter:
         min = df.min()
         max = df.max()
 
-        z = stats.norm.ppf(1 - (1 - cf) / 2)
+        z = stats.norm.ppf(1 - (1 - ci) / 2)
 
-        uncertainity = z * std / np.sqrt(count)
+        uncertainity = z * ( std / np.sqrt(count) )
 
         lower_ci = mean - uncertainity
         upper_ci = mean + uncertainity
