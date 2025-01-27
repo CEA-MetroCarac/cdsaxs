@@ -353,7 +353,8 @@ class Fitter:
                 np.random.default_rng(seed)
             else:
                 raise ValueError("Seed must be a non-negative integer.")
-        np.random.default_rng()
+        else:
+            np.random.default_rng()
         
         if not hasattr(sigma, '__len__'):
             sigma = [sigma] * N
@@ -372,7 +373,7 @@ class Fitter:
             # Use Gaussian move for the proposal distribution
             individuals = [np.random.uniform(-sigma, sigma, N) for _ in range(nwalkers)]
             
-            Sampler = emcee.EnsembleSampler(nwalkers, N, residual, moves=emcee.moves.GaussianMove(sigma), pool=None, vectorize=True)
+            Sampler = emcee.EnsembleSampler(nwalkers, N, residual, moves=emcee.moves.GaussianMove(cov=sigma**2, mode="vector"), pool=None, vectorize=True)
 
             with np.errstate(divide='ignore', invalid='ignore'):    
                 Sampler.run_mcmc(individuals, nsteps, progress=True)

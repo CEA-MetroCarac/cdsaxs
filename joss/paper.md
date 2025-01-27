@@ -78,7 +78,7 @@ This workflow ensures that the `cdsaxs` package not only identifies the optimal 
 
 As expected, for same initial conditions and search criteria, the fits are remarkably similar.
 
-Similarly, with the same dataset time taken to execute the program was measured. The number of generation was kept constant at 100 and different population sizes were tested. The test was performed on a ubuntu server with 164 logical processor of model Intel(R) Xeon(R) Platinum 8362 CPU @ 2.80GHz and the gpu used was NVIDIA A100 80GB PCIe.
+Similarly, with the same dataset time taken to execute the program was measured. The number of generation was kept constant at 100 and different population sizes were tested. The test was performed on a ubuntu server with 64 logical processors of model Intel(R) Xeon(R) Platinum 8362 CPU @ 2.80GHz and the gpu used was NVIDIA A100 80GB PCIe.
 
 ![Execution time for the two versions of code.](time_comparision.png){width="100%"}
 
