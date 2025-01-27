@@ -33,8 +33,7 @@ CD-SAXS (Critical Dimension Small Angle X-ray Scattering) is an emerging and pro
 
 # Statement of need
 
-CD-SAXS is a powerful and developing technique for characterization of nano-components in semiconductor industry. Efforts by the community were done to explore different combination of algorithms to model CD-SAXS data [@hannon2016advancing, @sunday2016mcmc]. However, there is a lack of open-source software for comprehensive data analysis. **Xi-cam**[@Xi-cam] is the only publicly available python package that contains CD-SAXS data analysis but the code is no longer maintained. While there are few other proprietary
-softwares, we don't have access to them. Thus, development of model and it's analysis for CD-SAXS requires researchers to develop their own solutions for simulating and fitting. Moreover, the diversity of samples analyzed using CD-SAXS requires versatile software that can accommodate different types of models and experimental conditions.
+CD-SAXS is a powerful and developing technique for characterization of nano-components in semiconductor industry. Efforts by the community were done to explore different combination of algorithms to model CD-SAXS data [@hannon2016advancing, @sunday2016mcmc]. However, there is a lack of open-source software for comprehensive data analysis. **Xi-cam**[@Xi-cam] is the only publicly available python package that contains CD-SAXS data analysis but the code is no longer maintained. While there are few other proprietary softwares, it is not freely accessible to the community. Thus, development of model and it's analysis for CD-SAXS requires researchers to develop their own solutions for simulating and fitting. Moreover, the diversity of samples analyzed using CD-SAXS requires versatile software that can accommodate different types of models and experimental conditions.
 
 The cdsaxs package is designed to address this critical gap by providing a modular, open-source solution tailored for CD-SAXS data analysis. It includes two robust models for simulating CD-SAXS data, while also allowing researchers to integrate their own models. This flexibility is crucial for testing and validating models against experimental data, making the development process more streamlined and accessible.
 
@@ -70,13 +69,13 @@ Following diagram illustrates the overall workflow of the CMAES algorithm in the
 
 This workflow ensures that the `cdsaxs` package not only identifies the optimal model configuration but also quantifies the confidence in the results, making it a powerful tool for CD-SAXS data analysis in both research and industrial applications.
 
-# Comparision
+# Comparison
 
-**Xi-cam**[@Xi-cam] is the open source software that was used for CD-SAXS simulations in this paper[@timothee]. Notably they use six stacked trapezoid model and rounded trapezoid model to do the simulation. The experimental dataset used by Timothée et al.'s for their study was used here for a fit with six stacked trapezoid model, enabling a comparison between Xi-cam and the `cdsaxs` package. The results are shown in the figure below:
+**Xi-cam**[@Xi-cam] is the open source software that was used for CD-SAXS simulations in this paper[@timothee]. Notably they use six stacked trapezoid model and rounded trapezoid model to do the simulation. The experimental dataset used by Choisnet et al. for their study was used here to test our model. We also fitted the dataset with with six stacked trapezoid model, enabling a direct comparison between Xi-cam and this package. The results are shown in the figure below:
 
 ![Comparison of fits obtained by Xi-cam and the cdsaxs package. a is in fourier space where results obtained experimentally are also plotted and b is the comparison of the profile in real space.\label{fig:compare}](compare_xicam_2.png){width="100%"}
 
-As expected, for same initial conditions and search criteria, the fits are remarkably similar.
+For same initial conditions and search criteria, we were able to demonstrate that the fits are remarkably similar and therefore demonstrate the accuracy of our modeling.
 
 Similarly, with the same dataset time taken to execute the program was measured. The number of generation was kept constant at 100 and different population sizes were tested. The test was performed on a ubuntu server with 64 logical processors of model Intel(R) Xeon(R) Platinum 8362 CPU @ 2.80GHz and the gpu used was NVIDIA A100 80GB PCIe.
 
