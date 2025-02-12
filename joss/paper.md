@@ -11,15 +11,13 @@ authors:
     affiliation: "1"
   - name: Guillaume Freychet
     orcid: 0000-0001-8406-798X
-    affiliation: "2"
+    affiliation: "1"
   - name : Matthew Bryan
     orcid: 0000-0001-9134-384X
-    affiliation: "2"
+    affiliation: "1"
 affiliations:
   - name: CEA, Leti, F-38000 Grenoble, France
     index: 1
-  - name: CEA, Leti, F-38000 Grenoble, France
-    index: 2
 date: 28 August 2024
 bibliography: paper.bib
 ---
