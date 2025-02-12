@@ -16,7 +16,7 @@ authors:
     orcid: 0000-0001-9134-384X
     affiliation: "2"
 affiliations:
-  - name: Univ. Montpellier, CEA, Leti, F-38000 Grenoble, France
+  - name: CEA, Leti, F-38000 Grenoble, France
     index: 1
   - name: CEA, Leti, F-38000 Grenoble, France
     index: 2
