@@ -52,6 +52,10 @@ class StackedTrapezoidSimulation(Simulation):
             use_gpu (bool, optional): Indicates if GPU should be used for numerical computations. Defaults to False.
             initial_guess (dict, optional): Initial guess values for the simulation. Defaults to None.
         """
+        # Check if the input arrays are 1D or 2D
+        if not (qys.ndim in [1, 2] and qzs.ndim in [1, 2]):
+            raise ValueError("qys and qzs arrays must be 1D or 2D.")
+        
         self.qys = qys
         self.qzs = qzs
         self.xp = cp if use_gpu and CUPY_AVAILABLE else np
@@ -60,7 +64,7 @@ class StackedTrapezoidSimulation(Simulation):
         self.TrapezoidGeometry = StackedTrapezoidGeometry(xp=self.xp, from_fitter=self.from_fitter, initial_guess=self.initial_guess)
         self.TrapezoidDiffraction = StackedTrapezoidDiffraction(TrapezoidGeometry=self.TrapezoidGeometry, xp=self.xp)
 
-    def simulate_diffraction(self, params=None, fit_mode='cmaes'):
+    def simulate_diffraction(self, params=None, fit_mode='cmaes', two_d=False):
         """Simulates the diffraction pattern of the stacked trapezoids.
 
         Args:
@@ -70,10 +74,27 @@ class StackedTrapezoidSimulation(Simulation):
         Returns:
             corrected_intensity (array-like): A 2D array of floats containing the corrected intensity.
         """
-        corrected_intensity = self.TrapezoidDiffraction.correct_form_factor_intensity(qys=self.qys, qzs=self.qzs, fitparams=params)
+        if two_d:
+            # flatten for the core computation
+            qys_flat = self.qys.ravel()
+            qzs_flat = self.qzs.ravel()
+        else:
+            qys_flat = self.qys
+            qzs_flat = self.qzs
+
+        corrected_intensity = self.TrapezoidDiffraction\
+                                .correct_form_factor_intensity(
+                                    qys=qys_flat, 
+                                    qzs=qzs_flat, 
+                                    fitparams=params)
 
         if not self.from_fitter:
-            return corrected_intensity[0]
+            if two_d:
+                rows, cols = self.qys.shape
+                corrected_intensity_2d = corrected_intensity[0].reshape(rows, cols)
+                return corrected_intensity_2d
+            else:
+                return corrected_intensity[0]
 
         return corrected_intensity
 

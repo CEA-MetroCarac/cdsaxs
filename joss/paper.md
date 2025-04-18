@@ -24,9 +24,9 @@ bibliography: paper.bib
 
 # Summary
 
-Miniaturizing transistors, the fundamental components of integrated circuits, poses significant challenges for the semiconductor industry. Accurate measurement of these features during production is essential to ensure the creation of high-quality chips. However, conventional in-line metrology techniques are approaching their limitations. To address these challenges, the industry is turning to advanced X-ray-based metrology [@sunday_2015].
+Miniaturizing transistors, the fundamental components of integrated circuits, poses significant challenges for the semiconductor industry. Accurate measurement of these features during production is essential to ensure the creation of high-quality chips. However, conventional in-line metrology techniques are approaching their limitations. To address these challenges, the industry is turning to advanced X-ray-based metrology [@sunday2015].
 
-CD-SAXS (Critical Dimension Small Angle X-ray Scattering) is an emerging and promising technique in this field. Studies[@sunday_2015] have demonstrated the effectiveness of CD-SAXS in accurately characterizing the shape and spacing of nanometer-scale patterns. The cdsaxs package is designed to offer comprehensive simulation and fitting tools for CD-SAXS synchrotron data, supporting researchers in advancing this innovative technology.
+CD-SAXS (Critical Dimension Small Angle X-ray Scattering) is an emerging and promising technique in this field. Studies[@sunday2015] have demonstrated the effectiveness of CD-SAXS in accurately characterizing the shape and spacing of nanometer-scale patterns. The cdsaxs package is designed to offer comprehensive simulation and fitting tools for CD-SAXS synchrotron data, supporting researchers in advancing this innovative technology.
 
 
 # Statement of need
@@ -71,15 +71,17 @@ This workflow ensures that the `cdsaxs` package not only identifies the optimal 
 
 **Xi-cam**[@Xi-cam] is the open source software that was used for CD-SAXS simulations in this paper[@timothee]. Notably they use six stacked trapezoid model and rounded trapezoid model to do the simulation. The experimental dataset used by Choisnet et al. for their study was used here to test our model. We also fitted the dataset with with six stacked trapezoid model, enabling a direct comparison between Xi-cam and this package. The results are shown in the figure below:
 
-![Comparison of fits obtained by Xi-cam and the cdsaxs package. a is in fourier space where results obtained experimentally are also plotted and b is the comparison of the profile in real space.\label{fig:compare}](compare_xicam_2.png){width="100%"}
+![Comparison of fits obtained by Xi-cam and the cdsaxs package in fourier space. Results obtained experimentally are also plotted.\label{fig:compare_profile}](compare_xicam.png){width="100%"}
+
+![Comparison of fits obtained by Xi-cam and the cdsaxs package in real space.{fig:compare_profile}](compare_xicam_profile.png){width="50%"}
 
 For same initial conditions and search criteria, we were able to demonstrate that the fits are remarkably similar and therefore demonstrate the accuracy of our modeling.
 
 Similarly, with the same dataset time taken to execute the program was measured. The number of generation was kept constant at 100 and different population sizes were tested. The test was performed on a ubuntu server with 64 logical processors of model Intel(R) Xeon(R) Platinum 8362 CPU @ 2.80GHz and the gpu used was NVIDIA A100 80GB PCIe.
 
-![Execution time for the two versions of code.](time_comparision.png){width="100%"}
+![Execution time for the two versions of code.](compare_time.png){width="100%"}
 
-We can observe that the cdsaxs package has significant improvement in execution time (almost five times) over old code.
+We can observe that the cdsaxs package has significant improvement in execution time (more than 10 times for CPU execution and 100 times for GPU execution) over old code.
 
 
 
