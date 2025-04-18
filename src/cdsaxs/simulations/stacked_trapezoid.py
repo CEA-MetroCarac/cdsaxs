@@ -68,11 +68,11 @@ class StackedTrapezoidSimulation(Simulation):
         """Simulates the diffraction pattern of the stacked trapezoids.
 
         Args:
-            fitparams (list, optional): A list of floats coming from the fitter. Defaults to None.
-            best_fit (array-like, optional): The best fit Arguments obtained from the fitter. Defaults to None.
-
+            params (array-like, optional): Parameters for the trapezoids. Defaults to None.
+            fit_mode (str, optional): Method used for fitting. Defaults to 'cmaes'.
+            two_d (bool, optional): Indicates if the q-values are 2D. Defaults to False.
         Returns:
-            corrected_intensity (array-like): A 2D array of floats containing the corrected intensity.
+            corrected_intensity (array-like): A (2D or 1D based on inputs) array of floats containing the debye-waller corrected intensity.
         """
         if two_d:
             # flatten for the core computation
