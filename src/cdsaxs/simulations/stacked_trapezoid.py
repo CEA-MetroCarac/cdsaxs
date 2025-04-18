@@ -24,8 +24,8 @@ class StackedTrapezoidSimulation(Simulation):
     """A class representing a simulation of stacked trapezoids for diffraction pattern calculation.
 
     Attributes:
-        qys (array-like): The q-values in the y-direction for diffraction calculation.
-        qzs (array-like): The q-values in the z-direction for diffraction calculation.
+        qys (array-like): The q-values in the y-direction for diffraction calculation (needs to be 1d or 2d array).
+        qzs (array-like): The q-values in the z-direction for diffraction calculation (needs to be 1d or 2d array).
         xp (module): The module used for numerical computations (numpy or cupy).
         from_fitter (bool): Indicates if the simulation is called from the fitter.
         TrapezoidGeometry (StackedTrapezoidGeometry): The geometry object for the stacked trapezoids.
@@ -46,8 +46,8 @@ class StackedTrapezoidSimulation(Simulation):
         """Initializes the StackedTrapezoidSimulation object.
 
         Args:
-            qys (array-like): The q-values in the y-direction for diffraction calculation.
-            qzs (array-like): The q-values in the z-direction for diffraction calculation.
+            qys (array-like): The q-values in the y-direction for diffraction calculation (needs to be 1d or 2d array).
+            qzs (array-like): The q-values in the z-direction for diffraction calculation (needs to be 1d or 2d array).
             from_fitter (bool, optional): Indicates if the simulation is called from the fitter. Defaults to False.
             use_gpu (bool, optional): Indicates if GPU should be used for numerical computations. Defaults to False.
             initial_guess (dict, optional): Initial guess values for the simulation. Defaults to None.
