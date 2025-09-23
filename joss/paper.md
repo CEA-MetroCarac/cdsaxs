@@ -59,10 +59,12 @@ The `cdsaxs` package provides a comprehensive framework for analyzing CD-SAXS da
     - The MCMC method generates a distribution of possible parameter sets, from which the package calculates confidence intervals, providing a quantitative measure of uncertainty for each parameter.
 
 The following diagram illustrates the overall workflow of the CMAES algorithm in the `cdsaxs` package:
- ![workflow of the cmaes algorithm cdsaxs package.\label{fig:workflow}](cmaes_overall.png){width="100%"}
+
+![Workflow of the CMAES algorithm in the cdsaxs package.\label{fig:workflow_cmaes}](cmaes_overall.png){width="100%"}
 
 The overall workflow of the MCMC algorithm:
- ![workflow of the mcmc algorithm cdsaxs package.\label{fig:workflow}](mcmc_overall.png){width="100%"}
+
+![Workflow of the MCMC algorithm in the cdsaxs package.\label{fig:workflow_mcmc}](mcmc_overall.png){width="100%"}
 
 This workflow ensures that the `cdsaxs` package not only identifies the optimal model configuration but also quantifies the confidence in the results, making it a powerful tool for CD-SAXS data analysis in both research and industrial applications.
 
@@ -72,15 +74,19 @@ Xi-cam [@Xi-cam] is the open source software that was used for CD-SAXS simulatio
 
 ![Comparison of fits obtained by Xi-cam and the cdsaxs package in fourier space. Results obtained experimentally are also plotted.\label{fig:compare_profile}](compare_xicam.png){width="100%"}
 
-![Comparison of fits obtained by Xi-cam and the cdsaxs package in real space.{fig:compare_profile}](compare_xicam_profile.png){width="50%"}
+![Comparison of fits obtained by Xi-cam and the cdsaxs package in real space.\label{fig:compare_profile_real}](compare_xicam_profile.png){width="50%"}
 
 For the same initial conditions and search criteria, we were able to demonstrate that the fits are remarkably similar and therefore demonstrate the accuracy of our modeling.
 
 Similarly, with the same dataset the time taken to execute the program was measured. The number of generations was kept constant at 100 and different population sizes were tested. The test was performed on an Ubuntu server with 64 logical processors of model Intel(R) Xeon(R) Platinum 8362 CPU @ 2.80GHz and the GPU used was NVIDIA A100 80GB PCIe.
 
-![Execution time for the two versions of code.](compare_time.png){width="100%"}
+![Execution time for the two versions of the code (CPU and GPU performance comparison).\label{fig:compare_time}](compare_time.png){width="100%"}
 
 We can observe that the cdsaxs package has significant improvement in execution time (more than 10 times for CPU execution and 100 times for GPU execution) over old code.
+
+# Conclusion
+
+In this work, we presented the `cdsaxs` package, a comprehensive and modular open-source framework for CD-SAXS data analysis. By integrating CMAES for fast optimization and MCMC for robust uncertainty estimation, the package offers both speed and reliability for fitting synchrotron data. Benchmark comparisons demonstrate its significant improvements over previous tools, both in accuracy and execution time. We believe `cdsaxs` will accelerate research workflows in the semiconductor industry and provide a foundation for future developments in X-ray-based metrology.
 
 # Acknowledgements
 
