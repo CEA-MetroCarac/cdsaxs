@@ -5,6 +5,14 @@ on:
     # Optional: restrict to changes to your paper or workflow
     paths:
       - 'joss/paper.md'
+      - 'joss/paper.bib'
+      - 'joss/cmaes_overall.png'
+      - 'joss/compare_time.png'
+      - 'joss/compare_xicam.png'
+      - 'joss/compare_xicam_2.png'
+      - 'joss/compare_xicam_profile.png'
+      - 'joss/mcmc_overall.png'
+      - 'joss/time_comparision.png'
       - '.github/workflows/draft-pdf.yml'
 
 jobs:
