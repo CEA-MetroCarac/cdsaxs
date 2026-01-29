@@ -24,13 +24,13 @@ bibliography: paper.bib
 
 # Summary
 
-Miniaturizing transistors, the fundamental components of integrated circuits, poses significant challenges for the semiconductor industry. Accurate measurements of these features during production **are** essential to ensure the creation of high-quality chips. However, conventional in-line metrology techniques are approaching their limits. To address these challenges, the industry is turning to advanced X-ray-based metrology [@sunday2015].
+Miniaturizing transistors, the fundamental components of integrated circuits, poses significant challenges for the semiconductor industry. Accurate measurements of these features during production are essential to ensure the creation of high-quality chips. However, conventional in-line metrology techniques are approaching their limits. To address these challenges, the industry is turning to advanced X-ray-based metrology [@sunday2015].
 
 CD-SAXS (Critical Dimension Small Angle X-ray Scattering) is an emerging and promising technique in this field. Studies conducted by [@sunday2015] have demonstrated the effectiveness of CD-SAXS in accurately characterizing the shape and spacing of nanometer-scale patterns. The `cdsaxs` package is designed to offer comprehensive simulation and fitting tools for CD-SAXS synchrotron data, supporting researchers in advancing this innovative technology.
 
 # Statement of need
 
-CD-SAXS is a powerful and evolving technique for the characterization of nano-components in the semiconductor industry. Community efforts have explored different combinations of algorithms to model CD-SAXS data, as described by [@hannon2016advancing; @sunday2016mcmc]. However, there is a lack of open-source software for comprehensive data analysis. Xi-cam [@Xi-cam] is the only publicly available **Python** package that includes CD-SAXS data analysis, although the code is no longer maintained. While there are a few other proprietary **software packages**, they are not freely accessible to the community. Thus, developing models and analysis tools for CD-SAXS often requires researchers to create their own solutions for simulation and fitting. Moreover, the diversity of samples analyzed using CD-SAXS requires versatile software that can accommodate different types of models and experimental conditions.
+CD-SAXS is a powerful and evolving technique for the characterization of nano-components in the semiconductor industry. Community efforts have explored different combinations of algorithms to model CD-SAXS data, as described by [@hannon2016advancing; @sunday2016mcmc]. However, there is a lack of open-source software for comprehensive data analysis. Xi-cam [@Xi-cam] is the only publicly available Python package that includes CD-SAXS data analysis, although the code is no longer maintained. While there are a few other proprietary software packages, they are not freely accessible to the community. Thus, developing models and analysis tools for CD-SAXS often requires researchers to create their own solutions for simulation and fitting. Moreover, the diversity of samples analyzed using CD-SAXS requires versatile software that can accommodate different types of models and experimental conditions.
 
 The `cdsaxs` package is designed to address this critical gap by providing a modular, open-source solution tailored for CD-SAXS data analysis. It includes two robust models for simulating CD-SAXS data, while also allowing researchers to integrate their own models. This flexibility is crucial for testing and validating models against experimental data, making the development process more streamlined and accessible.
 
@@ -46,7 +46,7 @@ The `cdsaxs` package provides a comprehensive framework for analyzing CD-SAXS da
 
 1. **Candidate Generation and Evaluation**:
     - The core of the `cdsaxs` fitting process begins with generating a series of candidate parameters. Each set of parameters represents a possible nanostructure configuration, defined by a set of features (e.g., widths, heights, etc.).
-    - These candidate models are then transformed into reciprocal space through a **Fourier Transform**, allowing direct comparison with the experimental CD-SAXS data.
+    - These candidate models are then transformed into reciprocal space through a Fourier Transform, allowing direct comparison with the experimental CD-SAXS data.
     - The package utilizes an optimization algorithm, specifically the Covariance Matrix Adaptation Evolution Strategy (CMA-ES), to iteratively refine the model parameters. This algorithm excels in high-dimensional optimization, rapidly converging on a solution that minimizes the error between the simulated and experimental scattering intensities.
 
 2. **Simulation and Comparison**:
