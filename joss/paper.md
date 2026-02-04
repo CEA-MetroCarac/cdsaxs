@@ -72,7 +72,7 @@ This workflow ensures that the `cdsaxs` package not only identifies the optimal 
 
 Xi-cam [@Xi-cam] is the open-source software used for CD-SAXS simulations described by Choisnet et al. [@timothee]. Notably, they use a six-stacked trapezoid model and a rounded trapezoid model for the simulations. The experimental dataset used by Choisnet et al. in their study was also used here to test our model. We fitted the dataset with a six-stacked trapezoid model, enabling a direct comparison between Xi-cam and this package. The results are shown in the figure below:
 
-![Comparison of fits obtained by Xi-cam and the cdsaxs package in Fourier space. Experimental results are also plotted.\label{fig:compare_profile}](compare_xicam.png){width="105%"}
+![Comparison of fits obtained by Xi-cam and the cdsaxs package in Fourier space. Experimental results are also plotted.\label{fig:compare_profile}](compare_xicam.png){width="100%"}
 
 ![Comparison of fits obtained by Xi-cam and the cdsaxs package in real space.\label{fig:compare_profile_real}](compare_xicam_profile.png){width="105%"}
 
