@@ -1,0 +1,35 @@
+name: Draft PDF
+
+on:
+  push:
+    # Optional: restrict to changes to your paper or workflow
+    paths:
+      - 'joss/paper.md'
+      - 'joss/paper.bib'
+      - 'joss/cmaes_overall.png'
+      - 'joss/compare_time.png'
+      - 'joss/compare_xicam.png'
+      - 'joss/compare_xicam_2.png'
+      - 'joss/compare_xicam_profile.png'
+      - 'joss/mcmc_overall.png'
+      - 'joss/time_comparision.png'
+      - '.github/workflows/draft-pdf.yml'
+
+jobs:
+  pdf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate PDF
+        uses: openjournals/openjournals-draft-action@master
+        with:
+          journal: joss
+          paper-path: joss/paper.md  # path to your Markdown paper file
+
+      - name: Upload PDF as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper
+          path: '**/*.pdf'
