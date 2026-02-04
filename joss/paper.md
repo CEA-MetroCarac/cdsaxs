@@ -74,7 +74,7 @@ Xi-cam [@Xi-cam] is the open-source software used for CD-SAXS simulations descri
 
 ![Comparison of fits obtained by Xi-cam and the cdsaxs package in Fourier space. Experimental results are also plotted.\label{fig:compare_profile}](compare_xicam.png){width="105%"}
 
-![Comparison of fits obtained by Xi-cam and the cdsaxs package in real space.\label{fig:compare_profile_real}](compare_xicam_profile.png){width="70%"}
+![Comparison of fits obtained by Xi-cam and the cdsaxs package in real space.\label{fig:compare_profile_real}](compare_xicam_profile.png){width="105%"}
 
 Under the same initial conditions and search criteria, we demonstrate that the fits are remarkably similar, validating the accuracy of our modeling approach.
 
