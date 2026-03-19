@@ -488,7 +488,7 @@ class StackedTrapezoidDiffraction():
         except NameError:
             pass
 
-        dw_array = self.xp.exp(-(qys * dw_factorx) ** 2 +
+        dw_array = self.xp.exp(-(qys * dw_factorx) ** 2 -
                             (qzs * dw_factorz) ** 2)
 
         intensities_corr = (self.xp.asarray(intensities).T * dw_array * scaling
