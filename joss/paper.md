@@ -71,7 +71,7 @@ experimental small-angle X-ray scattering (SAXS) data (blue dots)
 via the mean absolute log-residual error $\Xi_{G,C}$. (4) CMA-ES iteratively updates
 $\beta$, $\omega_0$, and $h$ to minimize $\Xi_{G,C}$; once the error falls within the
 specified tolerance, the best-fit parameters are extracted and the reconstructed
-trapezoid cross-section is plotted.\label{fig:workflow_cmaes}](cmaes_overall.png){width="105%"}
+trapezoid cross-section is plotted.\label{fig:workflow_cmaes}](cmaes_overall.png){width="60%"}
 
 The overall workflow of the MCMC algorithm:
 
