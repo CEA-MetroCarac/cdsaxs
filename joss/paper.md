@@ -24,7 +24,7 @@ bibliography: paper.bib
 
 # Summary
 
-Miniaturizing transistors, the fundamental components of integrated circuits, poses significant challenges for the semiconductor industry. Accurate measurements of these features during production are essential to ensure the creation of high-quality chips. However, conventional in-line metrology techniques are approaching their limits. To address these challenges, the industry is turning to advanced X-ray-based metrology [@sunday2015].
+The further miniaturizing of transistors, the fundamental components of integrated circuits, poses significant challenges for the semiconductor industry. Accurate measurements of these features during production are essential to ensure the creation of high-quality chips. However, conventional in-line metrology techniques are approaching their limits. To address these challenges, the industry is turning to advanced X-ray-based metrology [@sunday2015].
 
 CD-SAXS (Critical Dimension Small Angle X-ray Scattering) is an emerging and promising technique in this field. Studies conducted by [@sunday2015] have demonstrated the effectiveness of CD-SAXS in accurately characterizing the shape and spacing of nanometer-scale patterns. The `cdsaxs` package is designed to offer comprehensive simulation and fitting tools for CD-SAXS synchrotron data, supporting researchers in advancing this innovative technology.
 
@@ -46,7 +46,7 @@ The `cdsaxs` package provides a comprehensive framework for analyzing CD-SAXS da
 
 1. **Candidate Generation and Evaluation**:
     - The core of the `cdsaxs` fitting process begins with generating a series of candidate parameters. Each set of parameters represents a possible nanostructure configuration, defined by a set of features (e.g., widths, heights, etc.).
-    - These candidate models are then transformed into reciprocal space through a Fourier Transform, allowing direct comparison with the experimental CD-SAXS data.
+    - These candidate models are then transformed into reciprocal space through a Fourier transform, allowing direct comparison with the experimental CD-SAXS data.
     - The package utilizes an optimization algorithm, specifically the Covariance Matrix Adaptation Evolution Strategy (CMA-ES), to iteratively refine the model parameters. This algorithm excels in high-dimensional optimization, rapidly converging on a solution that minimizes the error between the simulated and experimental scattering intensities.
 
 2. **Simulation and Comparison**:
@@ -60,11 +60,36 @@ The `cdsaxs` package provides a comprehensive framework for analyzing CD-SAXS da
 
 The following diagram illustrates the overall workflow of the CMA-ES algorithm in the `cdsaxs` package:
 
-![Workflow of the CMA-ES algorithm in the cdsaxs package.\label{fig:workflow_cmaes}](cmaes_overall.png){width="105%"}
+![Overview of the CMA-ES fitting procedure for multi-layer trapezoid structures.
+(1) An initial guess for the trapezoid geometry is defined by the layer heights $h$,
+base width $\omega_0$, and left/right wall angles $\beta_{l,i}$ and $\beta_{r,i}$ for
+each layer $i$. (2) The analytical Fourier transform model $F(q_x, q_z)$ --- derived
+from the trapezoid geometry via the slope parameters $m_1 = \tan(\beta_l)$,
+$m_2 = \tan(\pi - \beta_r)$, and $t_1 = q_x + m_1 q_z$ --- yields a simulated
+scattering intensity (orange dots). (3) The simulated intensity is compared to
+experimental small-angle X-ray scattering (SAXS) data (blue dots)
+via the mean absolute log-residual error $\Xi_{G,C}$. (4) CMA-ES iteratively updates
+$\beta$, $\omega_0$, and $h$ to minimize $\Xi_{G,C}$; once the error falls within the
+specified tolerance, the best-fit parameters are extracted and the reconstructed
+trapezoid cross-section is plotted.\label{fig:workflow_cmaes}](cmaes_overall.png){width="105%"}
 
 The overall workflow of the MCMC algorithm:
 
-![Workflow of the MCMC algorithm in the cdsaxs package.\label{fig:workflow_mcmc}](mcmc_overall.png){width="105%"}
+![Overview of the MCMC sampling procedure for uncertainty quantification
+of trapezoid geometry parameters. (1) The parameter space is explored by propagating
+an ensemble of walkers through a proposal distribution
+$g(z) \propto 1/\sqrt{z}$ for $z \in [1/a,\, a]$, following two acceptance criteria:
+Metropolis-Hastings [@book_mcmc], where a proposed step is accepted with probability
+$P_i = e^{-0.5(\mathrm{GF}_i - \mathrm{GF}_B)}$, and the Stretch Move, where
+$P_i = e^{-Z^{1-N}(\mathrm{GF}_i - \mathrm{GF}_B)}$; rejected proposals are
+discarded and the walker remains at its current position. Walkers converge toward
+the posterior distribution $f(\theta | y_{1:k})$, yielding a representative sample
+of plausible trapezoid profiles shown in the upper-left panel (colored lines).
+(2) The resulting posterior sample is used to compute geometric error bounds:
+the black dashed lines show the $1\sigma$ credible interval around the
+best-fit profile (solid black), and the red shaded region indicates the full
+extent of the posterior ensemble, quantifying the uncertainty on each wall angle
+$\beta$, layer height $h$, and base width $\omega_0$.\label{fig:workflow_mcmc}](mcmc_overall.png){width="105%"}
 
 This workflow ensures that the `cdsaxs` package not only identifies the optimal model configuration but also quantifies confidence in the results, making it a powerful tool for CD-SAXS data analysis in both research and industrial applications.
 
@@ -72,7 +97,12 @@ This workflow ensures that the `cdsaxs` package not only identifies the optimal 
 
 Xi-cam [@Xi-cam] is the open-source software used for CD-SAXS simulations described by Choisnet et al. [@timothee]. Notably, they use a six-stacked trapezoid model and a rounded trapezoid model for the simulations. The experimental dataset used by Choisnet et al. in their study was also used here to test our model. We fitted the dataset with a six-stacked trapezoid model, enabling a direct comparison between Xi-cam and this package. The results are shown in the figure below:
 
-![Comparison of fits obtained by Xi-cam and the cdsaxs package in Fourier space. Experimental results are also plotted.\label{fig:compare_profile}](compare_xicam.png){width="100%"}
+![Comparison of simulated scattering intensities from the \texttt{cdsaxs}
+library (red dots) and Xicam (green crosses) against experimental CD-SAXS data
+(solid black line) across ten detector rows, each corresponding to a distinct
+$q_x$ slice and plotted as a function of $q_z$ (nm$^{-1}$). The close agreement between the \texttt{cdsaxs} and Xicam simulations
+across all rows validates the analytical Fourier transform model implemented in
+\texttt{cdsaxs} against the established Xicam reference.\label{fig:compare_profile}](compare_xicam.png){width="100%"}
 
 ![Comparison of fits obtained by Xi-cam and the cdsaxs package in real space.\label{fig:compare_profile_real}](compare_xicam_profile.png){width="105%"}
 
