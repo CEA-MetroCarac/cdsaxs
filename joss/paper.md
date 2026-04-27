@@ -76,7 +76,8 @@ trapezoid cross-section is plotted.\label{fig:workflow_cmaes}](cmaes_overall.png
 The overall workflow of the MCMC algorithm:
 
 ![Overview of the MCMC sampling procedure for uncertainty quantification
-of trapezoid geometry parameters. (1) The parameter space is explored by propagating
+of trapezoid geometry parameters. The workflow diagram on upper right is adapted from
+Lee et al. [@lee2015metamodel; @wikimedia_mh_flowchart]. (1) The parameter space is explored by propagating
 an ensemble of walkers through a proposal distribution
 $g(z) \propto 1/\sqrt{z}$ for $z \in [1/a,\, a]$, following two acceptance criteria:
 Metropolis-Hastings [@book_mcmc], where a proposed step is accepted with probability
