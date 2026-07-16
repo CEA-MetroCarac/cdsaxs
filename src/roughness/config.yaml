@@ -1,0 +1,12 @@
+profile:
+  N: 8000
+  dx: 1.0
+  sigma: 3.0
+  xi: 17.0
+  alpha: 0.5
+  sigma_noise: 0.0
+  mu: 0.0
+  N_realizations: 100
+  seed: 42
+  psd_model: None
+  save_file: /nobackup/nd276333/Workspace/Alternance/cdsaxs/assets/roughness/profiles/
