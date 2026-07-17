@@ -98,13 +98,12 @@ def synthetic_line_vectorised(N, dx=1.,
     if psd_model is None:
         psd_model = psd_lorentzian
     elif isinstance(psd_model, str):
-        psd_model = psd_model.lower().replace("_", " ").strip()
-    elif psd_model == "azarnouche":
-        psd_model = psd_azarnouche
-    elif psd_model == "lorentzian 2":
-        psd_model = psd_lorentzian_2
-    else:
-        raise ValueError(f"Unknown PSD model: {psd_model}")
+        if psd_model == "azarnouche":
+            psd_model = psd_azarnouche
+        elif psd_model == "lorentzian 2":
+            psd_model = psd_lorentzian_2
+        else:
+            raise ValueError(f"Unknown PSD model: {psd_model}")
     
 
     

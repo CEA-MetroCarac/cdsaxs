@@ -1,7 +1,7 @@
 profile:
-  N: 8000
-  dx: 1.0
-  sigma: 3.0
+  N: 10000
+  dx: 0.8
+  sigma: 1.5
   xi: 17.0
   alpha: 0.5
   sigma_noise: 0.0
@@ -10,3 +10,16 @@ profile:
   seed: 42
   psd_model: None
   save_file: /nobackup/nd276333/Workspace/Alternance/cdsaxs/assets/roughness/profiles/
+
+  cdsaxs:
+    width: 30.0
+    height: 60.0
+    qy_min: 0.0001
+    qy_max: 0.50
+    qy_points: 500
+    qx_min: 0.01
+    qx_max: 0.50
+    qx_points: 50
+    qz_fixed: 0.0
+    beta_r: null
+    beta_l: null
