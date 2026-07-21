@@ -64,5 +64,5 @@ def run_full_pipeline(config_path):
 
 if __name__ == "__main__":
     import sys
-    config_path = sys.argv[1] if len(sys.argv) > 1 else "cdsaxs/src/roughness/config.yaml"
+    config_path = sys.argv[1] if len(sys.argv) > 1 else "/homelocal/nd276333/Workspace/Alternance/cdsaxs/src/roughness/config.yaml"
     run_full_pipeline(config_path)

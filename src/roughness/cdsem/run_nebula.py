@@ -235,10 +235,10 @@ def get_beam_grid_from_tri(fname_out, pixel_size, n_lines, length_of_lines,
     y_min, y_max = min(ys), max(ys)
     z_min, z_max = min(zs), max(zs)
  
-    FOV_x_requested = n_lines * 2 * pitch
+    FOV_x_requested = n_lines * 2 * pitch + 5
     FOV_y_requested = length_of_lines
  
-    if FOV_x_requested > (x_max - x_min):
+    if FOV_x_requested > (x_max + 5 - x_min):
         raise ValueError(
             f"Requested FOV_x ({FOV_x_requested:.2f} nm from n_lines={n_lines} "
             f"x pitch={pitch:.2f}) exceeds mesh x-extent "
@@ -443,4 +443,11 @@ def run_nebula_pipeline(mesh_path, primary_electrons_path, mat_path,
  
     return save_tiff_path
  
+
+
+
+
+
+
+
 
