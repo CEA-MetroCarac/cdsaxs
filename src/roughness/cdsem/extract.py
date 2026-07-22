@@ -1,8 +1,9 @@
 # extract.py
 
 import numpy as np
-from roughness.cdsem.contour import extract_all_contours  # replace with actual module name
-
+from roughness.cdsem.contour import extract_all_contours
+from roughness.cdsem.contour_parallel import extract_all_contours_parallel
+import os
 
 def subtract_mean(contour, pixel_size: float = 1.0):
     """
@@ -99,34 +100,31 @@ def resample_uniform(y, x, pixel_size: float = 1.0, flagged_ys: set = None,
 
     return y_uniform, x_uniform
 
-def compute_psd(x_uniform, pixel_size: float = 1.0, window: str = None):
+def compute_psd(x_uniform, pixel_size=1.0, window=None):
+    
+    
     n = x_uniform.size
-
-    if window == 'hann':
+    if window in (None, 'none'):
+        w = np.ones(n)
+    elif window == 'hann':
         w = np.hanning(n)
     elif window == 'welch':
         m = (n - 1) / 2
         idx = np.arange(n)
         w = 1 - ((idx - m) / m) ** 2
-    elif window == 'none':
-        w = np.ones(n)
     else:
         raise ValueError(f"unknown window: {window}")
 
     x_windowed = x_uniform * w
-
     F = np.fft.rfft(x_windowed)
+    U = np.sum(w ** 2)
 
-    # normalize by window power (coherent gain loss) and sample count,
-    # scale by pixel_size for physical units, and account for one-sided spectrum
-    U = np.sum(w ** 2)  # window power normalization factor
-    psd = (np.abs(F) ** 2) * pixel_size / U
-
-    # one-sided correction: double all bins except DC and (if n even) Nyquist
-    psd[1:-1 if n % 2 == 0 else None] *= 2
+    # match generate.validate_profile_psd's convention exactly:
+    # psd = |F|^2 * dx / (2*pi*N)  when unwindowed, U == N so this reduces cleanly
+    psd = (np.abs(F) ** 2) * pixel_size / (2 * np.pi * U)
+    # NOTE: no one-sided *2 doubling — validate_profile_psd doesn't apply one
 
     freqs = np.fft.rfftfreq(n, d=pixel_size)
-
     return freqs, psd
 
 def process_all_edges(contours: dict, flags: dict = None,
@@ -210,16 +208,31 @@ def process_all_edges(contours: dict, flags: dict = None,
     }
 
 
-def run_pipeline(path: str, pixel_size: float = 1.0,
+def run_pipeline(path: str = None, contours_path: str = None,
+                  save_contour_path: str = None,
+                  pixel_size: float = 1.0,
                   detrend_method: str = 'none',
-                  window: str = 'hann'):
+                  window: str = None,
+                  parallel: bool = False):
     """
-    Full pipeline: load TIF -> extract contours -> post-process -> PSD.
+    Full pipeline: load TIF -> extract contours -> post-process -> PSD,
+    OR load pre-extracted contours directly from a .npy file, skipping
+    the TIF/extraction step entirely.
 
     Parameters
     ----------
-    path : str
-        Path to the .tif image.
+    path : str, optional
+        Path to the .tif image. Mutually exclusive with contours_path.
+    contours_path : str, optional
+        Path to a .npy file containing a pickled dict of contours
+        ({edge_index: [(y, x), ...]}), as produced by extract_all_contours.
+        Mutually exclusive with path. Flags are unavailable in this
+        mode -- missing-row exclusion in process_all_edges is skipped.
+    save_contour_path : str, optional
+        Directory to save extracted contours to as "contour.npy".
+        Only applies when path is used (contours are freshly extracted);
+        ignored if contours_path was used instead, since there's nothing
+        new to save.
     pixel_size : float
         Physical size per pixel, default 1 (pixel units).
     detrend_method : str
@@ -229,16 +242,34 @@ def run_pipeline(path: str, pixel_size: float = 1.0,
 
     Returns
     -------
-    result : dict
-        Output of extract_all_contours (image, contours, flags, etc.)
+    result : dict or None
+        Full output of extract_all_contours if path was used, else None.
     psd_result : dict
-        {'freqs', 'psd_per_edge', 'psd_avg'} from process_all_edges.
+        {'freqs', 'psd_per_edge', 'psd_avg', 'skipped_edges'}.
     """
-    result = extract_all_contours(path)
+    if (path is None) == (contours_path is None):
+        raise ValueError("provide exactly one of path or contours_path")
+
+    if path is not None:
+        if parallel:
+            result=extract_all_contours_parallel(path)
+        else:
+            result = extract_all_contours(path)
+        
+        contours = result['contours']
+        flags = result['flags']
+
+        if save_contour_path is not None:
+            save_path = os.path.join(save_contour_path, "contour.npy")
+            np.save(save_path, contours, allow_pickle=True)
+    else:
+        contours = np.load(contours_path, allow_pickle=True).item()
+        flags = None
+        result = None
 
     psd_result = process_all_edges(
-        contours=result['contours'],
-        flags=result['flags'],
+        contours=contours,
+        flags=flags,
         pixel_size=pixel_size,
         detrend_method=detrend_method,
         window=window,
